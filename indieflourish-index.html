@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Indieflourish — Human-First Connection</title>
+  
+  <!-- PWA Meta Tags & Manifest -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#2d4a3e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Indieflourish" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+
+  <!-- Supabase JS Client (v2 CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      --bg-color: #fbf8f3;
+      --card-bg: #ffffff;
+      --text-main: #2b2d2f;
+      --text-muted: #62666a;
+      --primary: #2d4a3e;
+      --primary-light: #eaf1ed;
+      --accent: #d97757;
+      --border: #e2ded8;
+      --radius: 12px;
+      --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: var(--font);
+      line-height: 1.6;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    #app-container {
+      width: 100%;
+      max-width: 520px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    header h1 {
+      font-size: 1.75rem;
+      color: var(--primary);
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    header p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .section { display: none; }
+    .section.active { display: block; }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.88rem;
+      margin-bottom: 6px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+      font-family: inherit;
+      background-color: #faf9f7;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: 2px solid var(--primary);
+      background-color: #fff;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      background-color: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    button:hover { background-color: #233a30; }
+
+    .question-card {
+      background: #faf9f7;
+      border: 1px solid var(--border);
+      padding: 18px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+
+    .option-btn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: #fff;
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      padding: 12px;
+      margin-top: 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: normal;
+    }
+
+    .option-btn.selected {
+      border-color: var(--primary);
+      background-color: var(--primary-light);
+      font-weight: 600;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      background-color: var(--primary-light);
+      color: var(--primary);
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .status-msg {
+      margin-top: 12px;
+      font-size: 0.88rem;
+      text-align: center;
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+
+<div id="app-container">
+  <header>
+    <h1>Indieflourish</h1>
+    <p>A non-profit space to bloom & connect deeply</p>
+  </header>
+
+  <!-- SECTION 1: AUTHENTICATION -->
+  <div id="auth-section" class="section active">
+    <h2>Welcome</h2>
+    <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">
+      Sign in with your email to receive a passwordless Magic Link.
+    </p>
+    <div class="form-group">
+      <label for="email-input">Email Address</label>
+      <input type="email" id="email-input" placeholder="you@example.com" required />
+    </div>
+    <button id="send-magic-link-btn">Send Magic Link</button>
+    <div id="auth-status" class="status-msg"></div>
+  </div>
+
+  <!-- SECTION 2: PROFILE SETUP -->
+  <div id="profile-section" class="section">
+    <h2>Complete Your Profile</h2>
+    <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
+      Authentic profiles lead to meaningful matches. No performative photos required.
+    </p>
+    <div class="form-group">
+      <label for="full-name">Full Name or Preferred Name</label>
+      <input type="text" id="full-name" placeholder="e.g. Alex" required />
+    </div>
+    <div class="form-group">
+      <label for="location">Location</label>
+      <input type="text" id="location" placeholder="e.g. Samastipur, Bihar" required />
+    </div>
+    <div class="form-group">
+      <label for="intent">Connection Intent</label>
+      <select id="intent">
+        <option value="both">Both Romantic & Platonic</option>
+        <option value="platonic">Platonic Friendships Only</option>
+        <option value="romantic">Romantic Connections Only</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="bio">Personal Reflection (Max 500 chars)</label>
+      <textarea id="bio" rows="3" placeholder="Share what brings you joy, your quiet routines, or what you hope to cultivate..."></textarea>
+    </div>
+    <button id="save-profile-btn">Save Profile & Begin Quiz</button>
+  </div>
+
+  <!-- SECTION 3: QUESTIONNAIRE -->
+  <div id="quiz-section" class="section">
+    <div id="quiz-container">
+      <!-- Questionnaire dynamic render -->
+    </div>
+    <button id="submit-quiz-btn" style="display: none;">Submit Responses</button>
+  </div>
+
+  <!-- SECTION 4: DASHBOARD / MATCHES -->
+  <div id="dashboard-section" class="section">
+    <h2>Your Flourish Space</h2>
+    <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
+      Active chat limit: <strong>0 / 3 active connections</strong>.
+    </p>
+    <div id="matches-container">
+      <p style="color: var(--text-muted); font-size: 0.9rem;">
+        Your values questionnaire is active! Matching algorithm will highlight compatible individuals based on transparent shared answers.
+      </p>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+  // Register Service Worker for PWA
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed:', err));
+    });
+  }
+</script>
+</body>
+</html>
