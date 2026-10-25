@@ -1,7 +1,6 @@
 const SUPABASE_URL = 'https://wzfhgkwivhftxdjtzapx.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6Zmhna3dpdmhmdHhkanR6YXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NTk0ODUsImV4cCI6MjEwODQzNTQ4NX0.HV12dnA-56Lm8D7UDzuoSw2cT9Nak8wBnHZoqAPgXBE';
 
-// Renamed from 'supabase' to 'supabaseClient' to prevent global CDN collision
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let currentUser = null;
@@ -19,6 +18,7 @@ function showSection(sectionId) {
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
+  // 1. Check Magic Link Tokens in Hash
   const hash = window.location.hash;
   if (hash && (hash.includes('access_token') || hash.includes('type=signup') || hash.includes('type=magiclink'))) {
     const { data } = await supabaseClient.auth.getSessionFromUrl({ url: window.location.href });
@@ -30,12 +30,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // 2. Standard Session Check
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (session && session.user) {
     currentUser = session.user;
     await checkProfileStatus();
   }
 
+  // 3. Auth Button Listener
   const sendBtn = document.getElementById('send-magic-link-btn');
   if (sendBtn) {
     sendBtn.addEventListener('click', async () => {
@@ -63,6 +65,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // 4. Profile Save Listener
   const saveProfileBtn = document.getElementById('save-profile-btn');
   if (saveProfileBtn) {
     saveProfileBtn.addEventListener('click', async () => {
@@ -88,6 +91,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // 5. Quiz Submit Listener
   const submitQuizBtn = document.getElementById('submit-quiz-btn');
   if (submitQuizBtn) {
     submitQuizBtn.addEventListener('click', async () => {
@@ -107,6 +111,17 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
     });
   }
+
+  // 6. Sign Out Listener
+  const signOutBtn = document.getElementById('sign-out-btn');
+  if (signOutBtn) {
+    signOutBtn.addEventListener('click', async () => {
+      await supabaseClient.auth.signOut();
+      currentUser = null;
+      userAnswersMap = {};
+      showSection('auth-section');
+    });
+  }
 });
 
 supabaseClient.auth.onAuthStateChange(async (event, session) => {
@@ -120,7 +135,13 @@ async function checkProfileStatus() {
   if (!currentUser) return;
   const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
   if (profile) {
-    await loadQuestionnaire();
+    // Check if they have already answered the quiz to decide whether to show dashboard or quiz
+    const { data: answers } = await supabaseClient.from('user_answers').select('question_id').eq('user_id', currentUser.id);
+    if (answers && answers.length > 0) {
+      showSection('dashboard-section');
+    } else {
+      await loadQuestionnaire();
+    }
   } else {
     showSection('profile-section');
   }
