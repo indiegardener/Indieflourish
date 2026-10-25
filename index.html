@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Indieflourish — Human-First Connection</title>
   
-  <!-- PWA Meta Tags & Manifest -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#2d4a3e" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -42,6 +41,7 @@
       justify-content: center;
       min-height: 100vh;
       padding: 16px;
+      overflow-x: hidden;
     }
 
     #app-container {
@@ -54,34 +54,33 @@
       box-shadow: 0 4px 20px rgba(0,0,0,0.03);
       display: flex;
       flex-direction: column;
+      position: relative;
     }
 
     header {
       text-align: center;
-      margin-bottom: 24px;
-      padding-bottom: 16px;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
       border-bottom: 1px solid var(--border);
     }
 
     header h1 {
-      font-size: 1.75rem;
-      color:(--primary);
+      font-size: 1.6rem;
+      color: var(--primary);
       font-weight: 700;
       letter-spacing: -0.5px;
     }
 
     header p {
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       color: var(--text-muted);
-      margin-top: 4px;
+      margin-top: 2px;
     }
 
     .section { display: none; }
     .section.active { display: block; }
 
-    .form-group {
-      margin-bottom: 18px;
-    }
+    .form-group { margin-bottom: 18px; }
 
     label {
       display: block;
@@ -166,6 +165,115 @@
       text-align: center;
       color: var(--accent);
     }
+
+    /* Swipe Deck Styles */
+    .deck-container {
+      position: relative;
+      width: 100%;
+      height: 380px;
+      margin-top: 10px;
+      margin-bottom: 20px;
+      perspective: 1000px;
+    }
+
+    .profile-card {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      user-select: none;
+      touch-action: pan-y;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+      cursor: grab;
+    }
+
+    .profile-card:active { cursor: grabbing; }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .card-name {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .card-location {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .card-match-badge {
+      background-color: var(--primary-light);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 6px 12px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .card-bio {
+      font-size: 0.95rem;
+      color: var(--text-main);
+      background: #faf9f7;
+      padding: 14px;
+      border-radius: 8px;
+      border-left: 3px solid var(--primary);
+      margin-bottom: 12px;
+      flex-grow: 1;
+      overflow-y: auto;
+    }
+
+    .card-intent {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: capitalize;
+    }
+
+    .swipe-controls {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-top: 10px;
+      margin-bottom: 16px;
+    }
+
+    .swipe-btn {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      border: 2px solid var(--border);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .swipe-btn.pass {
+      background: #ffffff;
+      color: #d9534f;
+      border-color: #f5c6cb;
+    }
+
+    .swipe-btn.connect {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
   </style>
 </head>
 <body>
@@ -225,24 +333,31 @@
     <button type="button" id="submit-quiz-btn" style="display: none;">Submit Responses</button>
   </div>
 
-<!-- SECTION 4: DASHBOARD / MATCHES -->
+  <!-- SECTION 4: DASHBOARD / SWIPE MATCHES -->
   <div id="dashboard-section" class="section">
-    <h2>Your Flourish Space</h2>
-    <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
-      Active chat limit: <strong>0 / 3 active connections</strong>.
-    </p>
-    <div id="matches-container" style="margin-bottom: 20px;">
-      <p style="color: var(--text-muted); font-size: 0.9rem;">
-        Your values questionnaire is active! Your mindful matching space is ready.
-      </p>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <h2 style="font-size: 1.25rem; color: var(--primary);">Discover Profiles</h2>
+      <span style="font-size: 0.8rem; color: var(--text-muted);">Active Chat Limit: <strong>0 / 3</strong></span>
     </div>
-    <button type="button" id="sign-out-btn" style="background-color: transparent; color: var(--accent); border: 1px solid var(--accent);">Sign Out</button>
+
+    <!-- Container for Stacked Cards -->
+    <div id="deck-container" class="deck-container">
+      <p style="text-align: center; color: var(--text-muted); padding-top: 100px;">Loading compatible profiles...</p>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="swipe-controls">
+      <button type="button" class="swipe-btn pass" id="pass-btn" title="Pass">✕</button>
+      <button type="button" class="swipe-btn connect" id="connect-btn" title="Connect">♥</button>
+    </div>
+
+    <button type="button" id="sign-out-btn" style="background-color: transparent; color: var(--accent); border: 1px solid var(--accent); margin-top: 10px;">Sign Out</button>
   </div>
+</div>
 
 <!-- SINGLE app.js inclusion -->
-<script src="app.js?v=3"></script>
+<script src="app.js?v=4"></script>
 <script>
-  // Register Service Worker for PWA
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed:', err));
