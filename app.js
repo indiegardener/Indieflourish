@@ -6,6 +6,8 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 let currentUser = null;
 let quizQuestions = [];
 let userAnswersMap = {};
+let availableProfiles = [];
+let currentCardIndex = 0;
 
 function showSection(sectionId) {
   const sections = ['auth-section', 'profile-section', 'quiz-section', 'dashboard-section'];
@@ -18,7 +20,7 @@ function showSection(sectionId) {
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
-  // 1. Check Magic Link Tokens in Hash
+  // 1. Check Magic Link Tokens
   const hash = window.location.hash;
   if (hash && (hash.includes('access_token') || hash.includes('type=signup') || hash.includes('type=magiclink'))) {
     const { data } = await supabaseClient.auth.getSessionFromUrl({ url: window.location.href });
@@ -107,7 +109,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (error) {
         alert('Error saving answers: ' + error.message);
       } else {
-        showSection('dashboard-section');
+        await loadDashboard();
       }
     });
   }
@@ -122,6 +124,17 @@ window.addEventListener('DOMContentLoaded', async () => {
       showSection('auth-section');
     });
   }
+
+  // 7. Swipe Button Listeners
+  const passBtn = document.getElementById('pass-btn');
+  const connectBtn = document.getElementById('connect-btn');
+
+  if (passBtn) {
+    passBtn.addEventListener('click', () => swipeCurrentCard('left'));
+  }
+  if (connectBtn) {
+    connectBtn.addEventListener('click', () => swipeCurrentCard('right'));
+  }
 });
 
 supabaseClient.auth.onAuthStateChange(async (event, session) => {
@@ -135,10 +148,9 @@ async function checkProfileStatus() {
   if (!currentUser) return;
   const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
   if (profile) {
-    // Check if they have already answered the quiz to decide whether to show dashboard or quiz
     const { data: answers } = await supabaseClient.from('user_answers').select('question_id').eq('user_id', currentUser.id);
     if (answers && answers.length > 0) {
-      showSection('dashboard-section');
+      await loadDashboard();
     } else {
       await loadQuestionnaire();
     }
@@ -186,5 +198,147 @@ async function loadQuestionnaire() {
         if (submitBtn) submitBtn.style.display = 'block';
       }
     });
+  });
+}
+
+// DASHBOARD & SWIPE DECK LOGIC
+async function loadDashboard() {
+  showSection('dashboard-section');
+  const deckContainer = document.getElementById('deck-container');
+  if (!deckContainer) return;
+
+  deckContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding-top: 100px;">Finding like-minded people...</p>';
+
+  // Fetch other profiles except current user
+  const { data: profiles, error } = await supabaseClient
+    .from('profiles')
+    .select('*')
+    .neq('id', currentUser.id);
+
+  if (error || !profiles || profiles.length === 0) {
+    deckContainer.innerHTML = `
+      <div style="text-align: center; padding-top: 60px;">
+        <p style="font-weight: 600; font-size: 1.1rem; color: var(--primary);">You are an early pioneer!</p>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 8px;">
+          No other profiles available right now. Check back soon as more users complete their questionnaire!
+        </p>
+      </div>
+    `;
+    return;
+  }
+
+  availableProfiles = profiles;
+  currentCardIndex = 0;
+  renderDeck();
+}
+
+function renderDeck() {
+  const deckContainer = document.getElementById('deck-container');
+  deckContainer.innerHTML = '';
+
+  if (currentCardIndex >= availableProfiles.length) {
+    deckContainer.innerHTML = `
+      <div style="text-align: center; padding-top: 80px;">
+        <p style="font-weight: 600; font-size: 1.1rem; color: var(--primary);">All caught up!</p>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 8px;">
+          You have viewed all current profiles in your space.
+        </p>
+      </div>
+    `;
+    return;
+  }
+
+  // Render current active card
+  const profile = availableProfiles[currentCardIndex];
+  const card = document.createElement('div');
+  card.className = 'profile-card';
+  card.id = 'active-swipe-card';
+
+  // Placeholder match score calculation
+  const matchPercentage = Math.floor(Math.random() * 20) + 80;
+
+  card.innerHTML = `
+    <div>
+      <div class="card-header">
+        <div>
+          <div class="card-name">${escapeHTML(profile.full_name || 'Anonymous')}</div>
+          <div class="card-location">📍 ${escapeHTML(profile.location_name || 'Location not specified')}</div>
+        </div>
+        <div class="card-match-badge">${matchPercentage}% Match</div>
+      </div>
+      <div class="card-bio">
+        "${escapeHTML(profile.bio || 'Living mindfully and seeking genuine connections.')}"
+      </div>
+    </div>
+    <div class="card-intent">
+      🌱 Intent: <strong>${escapeHTML(profile.intent || 'Both Romantic & Platonic')}</strong>
+    </div>
+  `;
+
+  deckContainer.appendChild(card);
+  attachSwipeEvents(card);
+}
+
+function swipeCurrentCard(direction) {
+  const card = document.getElementById('active-swipe-card');
+  if (!card) return;
+
+  const moveX = direction === 'right' ? window.innerWidth : -window.innerWidth;
+  card.style.transform = `translate(${moveX}px, 50px) rotate(${direction === 'right' ? 25 : -25}deg)`;
+  card.style.opacity = '0';
+
+  setTimeout(() => {
+    currentCardIndex++;
+    renderDeck();
+  }, 300);
+}
+
+function attachSwipeEvents(card) {
+  let startX = 0;
+  let currentX = 0;
+  let isDragging = false;
+
+  const onStart = (e) => {
+    isDragging = true;
+    startX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+    card.style.transition = 'none';
+  };
+
+  const onMove = (e) => {
+    if (!isDragging) return;
+    currentX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+    const deltaX = currentX - startX;
+    const rotate = deltaX * 0.08;
+    card.style.transform = `translateX(${deltaX}px) rotate(${rotate}deg)`;
+  };
+
+  const onEnd = () => {
+    if (!isDragging) return;
+    isDragging = false;
+    card.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+
+    const deltaX = currentX - startX;
+    if (deltaX > 100) {
+      swipeCurrentCard('right');
+    } else if (deltaX < -100) {
+      swipeCurrentCard('left');
+    } else {
+      card.style.transform = 'translateX(0px) rotate(0deg)';
+    }
+  };
+
+  card.addEventListener('mousedown', onStart);
+  card.addEventListener('mousemove', onMove);
+  card.addEventListener('mouseup', onEnd);
+  card.addEventListener('mouseleave', onEnd);
+
+  card.addEventListener('touchstart', onStart, { passive: true });
+  card.addEventListener('touchmove', onMove, { passive: true });
+  card.addEventListener('touchend', onEnd);
+}
+
+function escapeHTML(str) {
+  return String(str).replace(/[&<>"']/g, function (m) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
   });
 }
