@@ -14,16 +14,17 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
 
   <!-- External Stylesheet & Supabase SDK -->
-  <link rel="stylesheet" href="style.css?v=1" />
+  <link rel="stylesheet" href="style.css?v=7" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
 <div id="app-container">
-  <!-- Top Navigation Header (Indieflourish Left, Menu Right) -->
+  <!-- Top Navigation Header -->
   <header class="app-header">
     <h1 class="brand-title">Indieflourish</h1>
-    <div class="menu-container">
+    <!-- Hidden by default until user reaches dashboard -->
+    <div class="menu-container" id="header-menu-container" style="display: none;">
       <button type="button" class="menu-btn" id="menu-toggle-btn" title="Menu">☰</button>
       <div id="dropdown-menu" class="dropdown-menu">
         <button type="button" class="dropdown-item" id="menu-profile-preview">👤 Profile Preview</button>
@@ -37,13 +38,13 @@
   <div id="auth-section" class="section active">
     <h2>Welcome</h2>
     <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">
-      Sign in with your email to receive a secure verification code.
+      Sign in with your email to receive a secure verification link.
     </p>
     <div class="form-group">
       <label for="email-input">Email Address</label>
       <input type="email" id="email-input" placeholder="you@example.com" required />
     </div>
-    <button type="button" id="send-magic-link-btn">Send Verification Code</button>
+    <button type="button" id="send-magic-link-btn">Send Verification Link</button>
     <div id="auth-status" class="status-msg"></div>
   </div>
 
@@ -89,12 +90,10 @@
       <span style="font-size: 0.75rem; color: var(--text-muted);">Active Chat: 0 / 3</span>
     </div>
 
-    <!-- Larger Container for Stacked Cards -->
     <div id="deck-container" class="deck-container">
       <p style="text-align: center; color: var(--text-muted); padding-top: 140px;">Finding like-minded people...</p>
     </div>
 
-    <!-- Action Buttons -->
     <div class="swipe-controls">
       <button type="button" class="swipe-btn pass" id="pass-btn" title="Pass">✕</button>
       <button type="button" class="swipe-btn connect" id="connect-btn" title="Connect">♥</button>
@@ -113,8 +112,7 @@
   </div>
 </div>
 
-<!-- SINGLE app.js inclusion -->
-<script src="app.js?v=6"></script>
+<script src="app.js?v=8"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
