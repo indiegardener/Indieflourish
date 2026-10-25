@@ -1,7 +1,8 @@
-// fresh deploy
 const SUPABASE_URL = 'https://wzfhgkwivhftxdjtzapx.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6Zmhna3dpdmhmdHhkanR6YXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NTk0ODUsImV4cCI6MjEwODQzNTQ4NX0.HV12dnA-56Lm8D7UDzuoSw2cT9Nak8wBnHZoqAPgXBE';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Renamed from 'supabase' to 'supabaseClient' to prevent global CDN collision
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let currentUser = null;
 let quizQuestions = [];
@@ -20,7 +21,7 @@ function showSection(sectionId) {
 window.addEventListener('DOMContentLoaded', async () => {
   const hash = window.location.hash;
   if (hash && (hash.includes('access_token') || hash.includes('type=signup') || hash.includes('type=magiclink'))) {
-    const { data } = await supabase.auth.getSessionFromUrl({ url: window.location.href });
+    const { data } = await supabaseClient.auth.getSessionFromUrl({ url: window.location.href });
     if (data && data.session) {
       currentUser = data.session.user;
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -29,7 +30,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session } } = await supabaseClient.auth.getSession();
   if (session && session.user) {
     currentUser = session.user;
     await checkProfileStatus();
@@ -49,7 +50,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
       if (statusEl) statusEl.textContent = 'Sending verification code...';
 
-      const { error } = await supabase.auth.signInWithOtp({
+      const { error } = await supabaseClient.auth.signInWithOtp({
         email: email,
         options: { emailRedirectTo: window.location.origin }
       });
@@ -75,7 +76,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      const { error } = await supabase.from('profiles').insert([
+      const { error } = await supabaseClient.from('profiles').insert([
         { id: currentUser.id, full_name: fullName, location_name: location, intent: intent, bio: bio }
       ]);
 
@@ -97,7 +98,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         weight: 1
       }));
 
-      const { error } = await supabase.from('user_answers').upsert(payload, { onConflict: 'user_id,question_id' });
+      const { error } = await supabaseClient.from('user_answers').upsert(payload, { onConflict: 'user_id,question_id' });
 
       if (error) {
         alert('Error saving answers: ' + error.message);
@@ -108,7 +109,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-supabase.auth.onAuthStateChange(async (event, session) => {
+supabaseClient.auth.onAuthStateChange(async (event, session) => {
   if (session && session.user) {
     currentUser = session.user;
     await checkProfileStatus();
@@ -117,7 +118,7 @@ supabase.auth.onAuthStateChange(async (event, session) => {
 
 async function checkProfileStatus() {
   if (!currentUser) return;
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
+  const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
   if (profile) {
     await loadQuestionnaire();
   } else {
@@ -131,7 +132,7 @@ async function loadQuestionnaire() {
   if (!container) return;
   
   container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">Loading your questionnaire...</p>';
-  const { data: questions, error } = await supabase.from('questions').select('*').order('id', { ascending: true });
+  const { data: questions, error } = await supabaseClient.from('questions').select('*').order('id', { ascending: true });
 
   if (error || !questions || !questions.length) {
     container.innerHTML = '<p style="text-align: center; color: var(--accent);">Unable to load questions.</p>';
