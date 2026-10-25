@@ -55,12 +55,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // 2. Handle Hash tokens (#access_token=...)
-  if (window.location.hash && window.location.hash.includes('access_token')) {
-    await new Promise(resolve => setTimeout(resolve, 500));
-  }
-
-  // 3. Standard session check from browser storage
+  // 2. Standard session check from browser storage
   const { data: { session }, error } = await supabase.auth.getSession();
   
   if (session) {
