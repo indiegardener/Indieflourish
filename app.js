@@ -114,7 +114,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // 6. Hamburger Menu & Dropdown Listeners
+  // 6. Hamburger Menu Listeners
   const menuToggleBtn = document.getElementById('menu-toggle-btn');
   const dropdownMenu = document.getElementById('dropdown-menu');
 
@@ -129,7 +129,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // 7. Dropdown Action Handlers
+  // 7. Dropdown Actions
   const profilePreviewBtn = document.getElementById('menu-profile-preview');
   const signOutBtn = document.getElementById('menu-sign-out');
   const deleteAccountBtn = document.getElementById('menu-delete-account');
@@ -243,7 +243,7 @@ async function loadQuestionnaire() {
   });
 }
 
-// DASHBOARD & SWIPE DECK LOGIC
+// DASHBOARD & SWIPE DECK LOGIC WITH BACKEND MATCHING
 async function loadDashboard() {
   showSection('dashboard-section');
   const deckContainer = document.getElementById('deck-container');
@@ -251,26 +251,49 @@ async function loadDashboard() {
 
   deckContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding-top: 100px;">Finding like-minded people...</p>';
 
+  // Fetch profiles the user has already interacted with (sent or received requests)
+  const { data: existingConnections } = await supabaseClient
+    .from('connections')
+    .select('requester_id, receiver_id')
+    .or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
+
+  const interactedUserIds = new Set([currentUser.id]);
+  if (existingConnections) {
+    existingConnections.forEach(c => {
+      interactedUserIds.add(c.requester_id);
+      interactedUserIds.add(c.receiver_id);
+    });
+  }
+
+  // Fetch only unswiped profiles
   const { data: profiles, error } = await supabaseClient
     .from('profiles')
-    .select('*')
-    .neq('id', currentUser.id);
+    .select('*');
 
-  if (error || !profiles || profiles.length === 0) {
-    deckContainer.innerHTML = `
-      <div style="text-align: center; padding-top: 60px;">
-        <p style="font-weight: 600; font-size: 1.1rem; color: var(--primary);">You are an early pioneer!</p>
-        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 8px;">
-          No other profiles available right now. Check back soon!
-        </p>
-      </div>
-    `;
+  if (error || !profiles) {
+    deckContainer.innerHTML = '<p style="text-align: center; color: var(--accent);">Error loading profiles.</p>';
     return;
   }
 
-  availableProfiles = profiles;
+  availableProfiles = profiles.filter(p => !interactedUserIds.has(p.id));
   currentCardIndex = 0;
+  
+  await updateActiveChatCount();
   renderDeck();
+}
+
+async function updateActiveChatCount() {
+  const { data: activeMatches } = await supabaseClient
+    .from('connections')
+    .select('id')
+    .eq('status', 'accepted')
+    .or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
+
+  const count = activeMatches ? activeMatches.length : 0;
+  const countBadge = document.querySelector('.deck-subheader span:last-child');
+  if (countBadge) {
+    countBadge.innerHTML = `Active Chat: <strong>${count} / 3</strong>`;
+  }
 }
 
 function renderDeck() {
@@ -279,10 +302,10 @@ function renderDeck() {
 
   if (currentCardIndex >= availableProfiles.length) {
     deckContainer.innerHTML = `
-      <div style="text-align: center; padding-top: 80px;">
+      <div style="text-align: center; padding-top: 100px;">
         <p style="font-weight: 600; font-size: 1.1rem; color: var(--primary);">All caught up!</p>
         <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 8px;">
-          You have viewed all current profiles in your space.
+          You have viewed all available profiles. New people will appear here as they join!
         </p>
       </div>
     `;
@@ -294,7 +317,7 @@ function renderDeck() {
   card.className = 'profile-card';
   card.id = 'active-swipe-card';
 
-  const matchPercentage = Math.floor(Math.random() * 20) + 80;
+  const matchPercentage = Math.floor(Math.random() * 15) + 82;
 
   card.innerHTML = `
     <div>
@@ -318,18 +341,54 @@ function renderDeck() {
   attachSwipeEvents(card);
 }
 
-function swipeCurrentCard(direction) {
+async function swipeCurrentCard(direction) {
   const card = document.getElementById('active-swipe-card');
   if (!card) return;
+
+  const targetProfile = availableProfiles[currentCardIndex];
 
   const moveX = direction === 'right' ? window.innerWidth : -window.innerWidth;
   card.style.transform = `translate(${moveX}px, 50px) rotate(${direction === 'right' ? 25 : -25}deg)`;
   card.style.opacity = '0';
 
+  if (direction === 'right' && targetProfile) {
+    await handleRightSwipe(targetProfile);
+  }
+
   setTimeout(() => {
     currentCardIndex++;
     renderDeck();
   }, 300);
+}
+
+async function handleRightSwipe(targetProfile) {
+  // Check if target profile already sent a request to current user
+  const { data: incomingRequest } = await supabaseClient
+    .from('connections')
+    .select('*')
+    .eq('requester_id', targetProfile.id)
+    .eq('receiver_id', currentUser.id)
+    .single();
+
+  if (incomingRequest) {
+    // IT'S A MATCH! Update status to accepted
+    const { error } = await supabaseClient
+      .from('connections')
+      .update({ status: 'accepted', updated_at: new Date().toISOString() })
+      .eq('id', incomingRequest.id);
+
+    if (!error) {
+      alert(`🎉 It's a Match! You and ${targetProfile.full_name} have both swiped right. Your active chat space is open!`);
+      await updateActiveChatCount();
+    }
+  } else {
+    // Send new pending connection request
+    await supabaseClient
+      .from('connections')
+      .insert([
+        { requester_id: currentUser.id, receiver_id: targetProfile.id, status: 'pending' }
+      ]);
+  }
 }
 
 function attachSwipeEvents(card) {
@@ -401,8 +460,8 @@ async function showProfilePreview() {
 }
 
 async function deleteUserAccount() {
-  // Delete user answers & profile data
   await supabaseClient.from('user_answers').delete().eq('user_id', currentUser.id);
+  await supabaseClient.from('connections').delete().or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
   await supabaseClient.from('profiles').delete().eq('id', currentUser.id);
   await supabaseClient.auth.signOut();
   currentUser = null;
