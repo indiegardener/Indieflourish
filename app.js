@@ -39,9 +39,10 @@ document.getElementById('send-magic-link-btn').addEventListener('click', async (
   }
 });
 
-// Check Session on Load
+// Check Session and Handle Magic Link Hash on Load
 window.addEventListener('DOMContentLoaded', async () => {
-  const { data: { session } } = await supabase.auth.getSession();
+  // Supabase automatically parses the access token from the URL hash (#access_token=...)
+  const { data: { session }, error } = await supabase.auth.getSession();
   
   if (session) {
     currentUser = session.user;
@@ -49,9 +50,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// Listen for Auth Changes
+// Listen for Auth State Changes (Fires immediately when magic link token is processed)
 supabase.auth.onAuthStateChange(async (event, session) => {
-  if (session) {
+  if (event === 'SIGNED_IN' && session) {
     currentUser = session.user;
     await checkProfileStatus();
   }
