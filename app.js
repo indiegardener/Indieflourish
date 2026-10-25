@@ -41,9 +41,22 @@ document.getElementById('send-magic-link-btn').addEventListener('click', async (
 
 // Check Session and Handle Magic Link Hash on Load
 window.addEventListener('DOMContentLoaded', async () => {
-  // Supabase automatically parses the access token from the URL hash (#access_token=...)
-  const { data: { session }, error } = await supabase.auth.getSession();
-  
+  // Check if Supabase passed tokens in the URL hash or query parameters
+  const hash = window.location.hash;
+  if (hash && hash.includes('access_token')) {
+    // Let Supabase handle the incoming hash credentials
+    const { data, error } = await supabase.auth.getSession();
+    if (data?.session) {
+      currentUser = data.session.user;
+      // Clean up the URL hash so it looks clean
+      window.history.replaceState({}, document.title, window.location.pathname);
+      await checkProfileStatus();
+      return;
+    }
+  }
+
+  // Standard session check
+  const { data: { session } } = await supabase.auth.getSession();
   if (session) {
     currentUser = session.user;
     await checkProfileStatus();
