@@ -17,6 +17,12 @@ function showSection(sectionId) {
   });
   const activeEl = document.getElementById(sectionId);
   if (activeEl) activeEl.classList.add('active');
+
+  // Control header menu visibility: only show on dashboard
+  const menuContainer = document.getElementById('header-menu-container');
+  if (menuContainer) {
+    menuContainer.style.display = (sectionId === 'dashboard-section') ? 'block' : 'none';
+  }
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -52,7 +58,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      if (statusEl) statusEl.textContent = 'Sending verification code...';
+      if (statusEl) statusEl.textContent = 'Sending verification link...';
 
       const { error } = await supabaseClient.auth.signInWithOtp({
         email: email,
@@ -62,7 +68,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (error) {
         if (statusEl) statusEl.textContent = 'Error: ' + error.message;
       } else {
-        if (statusEl) statusEl.textContent = 'Verification code sent! Check your inbox.';
+        if (statusEl) statusEl.textContent = 'Verification link sent! Check your inbox.';
       }
     });
   }
@@ -81,9 +87,9 @@ window.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      const { error } = await supabaseClient.from('profiles').insert([
+      const { error } = await supabaseClient.from('profiles').upsert([
         { id: currentUser.id, full_name: fullName, location_name: location, intent: intent, bio: bio }
-      ]);
+      ], { onConflict: 'id' });
 
       if (error) {
         alert('Error saving profile: ' + error.message);
@@ -251,13 +257,11 @@ async function loadDashboard() {
 
   deckContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding-top: 100px;">Finding like-minded people...</p>';
 
-  // Fetch all connections involving current user
   const { data: existingConnections } = await supabaseClient
     .from('connections')
     .select('requester_id, receiver_id, status, created_at')
     .or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
 
-  // Define 30-day expiration window
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -268,21 +272,16 @@ async function loadDashboard() {
       const otherId = c.requester_id === currentUser.id ? c.receiver_id : c.requester_id;
 
       if (c.status === 'accepted' || c.status === 'pending') {
-        // Active matches or pending requests are always excluded
         excludedUserIds.add(otherId);
       } else if (c.status === 'rejected' && c.requester_id === currentUser.id) {
-        // Left swipe (rejection) by current user: check if within 30 days
         const createdAt = new Date(c.created_at);
         if (createdAt > thirtyDaysAgo) {
-          // Still active cooldown period (less than 30 days)
           excludedUserIds.add(otherId);
         }
-        // If older than 30 days, it has expired! Profile will show again.
       }
     });
   }
 
-  // Fetch all profiles
   const { data: profiles, error } = await supabaseClient
     .from('profiles')
     .select('*');
@@ -410,7 +409,6 @@ async function handleRightSwipe(targetProfile) {
 }
 
 async function handleLeftSwipe(targetProfile) {
-  // Record left swipe as 'rejected' with timestamp
   await supabaseClient
     .from('connections')
     .upsert([
