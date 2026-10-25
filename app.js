@@ -59,9 +59,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-  // Standard session check
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session) {
+// Listen for Auth State Changes (Fires immediately when magic link token is processed)
+supabase.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_IN' && session) {
     currentUser = session.user;
     await checkProfileStatus();
   }
