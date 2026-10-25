@@ -1,48 +1,130 @@
 // Initialize Supabase Client
 const SUPABASE_URL = 'https://wzfhgkwivhftxdjtzapx.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6Zmhna3dpdmhmdHhkanR6YXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NTk0ODUsImV4cCI6MjEwODQzNTQ4NX0.HV12dnA-56Lm8D7UDzuoSw2cT9Nak8wBnHZoqAPgXBE';
-const supabase = window.supabase.createClient('https://wzfhgkwivhftxdjtzapx.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6Zmhna3dpdmhmdHhkanR6YXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NTk0ODUsImV4cCI6MjEwODQzNTQ4NX0.HV12dnA-56Lm8D7UDzuoSw2cT9Nak8wBnHZoqAPgXBE');
-
-// DOM Elements
-const authSection = document.getElementById('auth-section');
-const profileSection = document.getElementById('profile-section');
-const quizSection = document.getElementById('quiz-section');
-const dashboardSection = document.getElementById('dashboard-section');
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let currentUser = null;
 let quizQuestions = [];
 let userAnswersMap = {};
 
 // View Switcher Utility
-function showSection(sectionElement) {
-  [authSection, profileSection, quizSection, dashboardSection].forEach(s => s.classList.remove('active'));
-  sectionElement.classList.add('active');
+function showSection(sectionId) {
+  const sections = ['auth-section', 'profile-section', 'quiz-section', 'dashboard-section'];
+  sections.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('active');
+  });
+  const activeEl = document.getElementById(sectionId);
+  if (activeEl) activeEl.classList.add('active');
 }
 
-// 1. Explicit Session Check & Magic Link Hash Handler on Load
+// Wait for DOM to load before attaching event listeners
 window.addEventListener('DOMContentLoaded', async () => {
-  // Check if Supabase passed tokens in the URL hash (from Magic Link / Verification)
+
+  // 1. Check Magic Link Tokens in Hash
   const hash = window.location.hash;
   if (hash && (hash.includes('access_token') || hash.includes('type=signup') || hash.includes('type=magiclink'))) {
     const { data, error } = await supabase.auth.getSessionFromUrl({ url: window.location.href });
     if (data && data.session) {
       currentUser = data.session.user;
-      // Clean the token hash from the URL bar
       window.history.replaceState({}, document.title, window.location.pathname);
       await checkProfileStatus();
       return;
     }
   }
 
-  // Standard session check
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  // 2. Standard Session Check
+  const { data: { session } } = await supabase.auth.getSession();
   if (session && session.user) {
     currentUser = session.user;
     await checkProfileStatus();
   }
+
+  // 3. Attach Authentication Button Listener
+  const sendBtn = document.getElementById('send-magic-link-btn');
+  if (sendBtn) {
+    sendBtn.addEventListener('click', async () => {
+      const emailInput = document.getElementById('email-input');
+      const statusEl = document.getElementById('auth-status');
+      const email = emailInput ? emailInput.value.trim() : '';
+
+      if (!email) {
+        if (statusEl) statusEl.textContent = 'Please enter a valid email address.';
+        return;
+      }
+
+      if (statusEl) statusEl.textContent = 'Sending verification link...';
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email,
+        options: {
+          emailRedirectTo: window.location.origin
+        }
+      });
+
+      if (error) {
+        if (statusEl) statusEl.textContent = 'Error: ' + error.message;
+      } else {
+        if (statusEl) statusEl.textContent = 'Verification link sent! Check your email inbox.';
+      }
+    });
+  }
+
+  // 4. Attach Profile Save Listener
+  const saveProfileBtn = document.getElementById('save-profile-btn');
+  if (saveProfileBtn) {
+    saveProfileBtn.addEventListener('click', async () => {
+      const fullName = document.getElementById('full-name').value.trim();
+      const location = document.getElementById('location').value.trim();
+      const intent = document.getElementById('intent').value;
+      const bio = document.getElementById('bio').value.trim();
+
+      if (!fullName || !location) {
+        alert('Please fill out your name and location.');
+        return;
+      }
+
+      const { error } = await supabase.from('profiles').insert([
+        {
+          id: currentUser.id,
+          full_name: fullName,
+          location_name: location,
+          intent: intent,
+          bio: bio
+        }
+      ]);
+
+      if (error) {
+        alert('Error saving profile: ' + error.message);
+      } else {
+        await loadQuestionnaire();
+      }
+    });
+  }
+
+  // 5. Attach Quiz Submit Listener
+  const submitQuizBtn = document.getElementById('submit-quiz-btn');
+  if (submitQuizBtn) {
+    submitQuizBtn.addEventListener('click', async () => {
+      const payload = Object.keys(userAnswersMap).map(qid => ({
+        user_id: currentUser.id,
+        question_id: parseInt(qid),
+        selected_option_id: userAnswersMap[qid],
+        weight: 1
+      }));
+
+      const { error } = await supabase.from('user_answers').upsert(payload, { onConflict: 'user_id,question_id' });
+
+      if (error) {
+        alert('Error saving answers: ' + error.message);
+      } else {
+        showSection('dashboard-section');
+      }
+    });
+  }
 });
 
-// Listen for subsequent Auth State Changes
+// Auth State Listener
 supabase.auth.onAuthStateChange(async (event, session) => {
   if (session && session.user) {
     currentUser = session.user;
@@ -50,35 +132,7 @@ supabase.auth.onAuthStateChange(async (event, session) => {
   }
 });
 
-// 2. Authentication: Send Magic Link / Verification Code
-document.getElementById('send-magic-link-btn').addEventListener('click', async () => {
-  const emailInput = document.getElementById('email-input');
-  const statusEl = document.getElementById('auth-status');
-  const email = emailInput ? emailInput.value.trim() : '';
-  
-  if (!email) {
-    statusEl.textContent = 'Please enter a valid email address.';
-    return;
-  }
-
-  statusEl.textContent = 'Sending verification link...';
-  
-  // Use current window origin so it redirects back to your live Vercel domain correctly
-  const { error } = await supabase.auth.signInWithOtp({ 
-    email: email,
-    options: {
-      emailRedirectTo: window.location.origin
-    }
-  });
-
-  if (error) {
-    statusEl.textContent = 'Error: ' + error.message;
-  } else {
-    statusEl.textContent = 'Verification link sent! Check your email inbox.';
-  }
-});
-
-// 3. Check Profile Status in Database
+// Check Profile Status in Database
 async function checkProfileStatus() {
   if (!currentUser) return;
 
@@ -89,47 +143,18 @@ async function checkProfileStatus() {
     .maybeSingle();
 
   if (profile) {
-    // Profile exists, proceed to questionnaire / dashboard
     await loadQuestionnaire();
   } else {
-    // Profile does not exist yet, show profile setup form
-    showSection(profileSection);
+    showSection('profile-section');
   }
 }
 
-// 4. Save User Profile
-document.getElementById('save-profile-btn').addEventListener('click', async () => {
-  const fullName = document.getElementById('full-name').value.trim();
-  const location = document.getElementById('location').value.trim();
-  const intent = document.getElementById('intent').value;
-  const bio = document.getElementById('bio').value.trim();
-
-  if (!fullName || !location) {
-    alert('Please fill out your name and location.');
-    return;
-  }
-
-  const { error } = await supabase.from('profiles').insert([
-    {
-      id: currentUser.id,
-      full_name: fullName,
-      location_name: location,
-      intent: intent,
-      bio: bio
-    }
-  ]);
-
-  if (error) {
-    alert('Error saving profile: ' + error.message);
-  } else {
-    await loadQuestionnaire();
-  }
-});
-
-// 5. Load & Render Questionnaire
+// Load & Render Questionnaire
 async function loadQuestionnaire() {
-  showSection(quizSection);
+  showSection('quiz-section');
   const container = document.getElementById('quiz-container');
+  if (!container) return;
+  
   container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">Loading your questionnaire...</p>';
 
   const { data: questions, error } = await supabase.from('questions').select('*').order('id', { ascending: true });
@@ -145,7 +170,7 @@ async function loadQuestionnaire() {
   questions.forEach((q, idx) => {
     const card = document.createElement('div');
     card.className = 'question-card';
-    
+
     let optionsHTML = '';
     q.options.forEach(opt => {
       optionsHTML += `
@@ -170,35 +195,15 @@ async function loadQuestionnaire() {
       const qid = e.target.getAttribute('data-qid');
       const optid = e.target.getAttribute('data-optid');
 
-      // Update UI selection styling
       document.querySelectorAll(`.option-btn[data-qid="${qid}"]`).forEach(b => b.classList.remove('selected'));
       e.target.classList.add('selected');
 
-      // Store answer
       userAnswersMap[qid] = optid;
 
-      // Show submit button once all questions have been answered
       if (Object.keys(userAnswersMap).length === quizQuestions.length) {
-        document.getElementById('submit-quiz-btn').style.display = 'block';
+        const submitBtn = document.getElementById('submit-quiz-btn');
+        if (submitBtn) submitBtn.style.display = 'block';
       }
     });
   });
 }
-
-// 6. Submit Questionnaire Answers
-document.getElementById('submit-quiz-btn').addEventListener('click', async () => {
-  const payload = Object.keys(userAnswersMap).map(qid => ({
-    user_id: currentUser.id,
-    question_id: parseInt(qid),
-    selected_option_id: userAnswersMap[qid],
-    weight: 1
-  }));
-
-  const { error } = await supabase.from('user_answers').upsert(payload, { onConflict: 'user_id,question_id' });
-
-  if (error) {
-    alert('Error saving answers: ' + error.message);
-  } else {
-    showSection(dashboardSection);
-  }
-});
