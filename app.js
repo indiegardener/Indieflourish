@@ -12,109 +12,92 @@ const dashboardSection = document.getElementById('dashboard-section');
 let currentUser = null;
 let quizQuestions = [];
 let userAnswersMap = {};
-let pendingEmail = '';
 
-// View Switcher
+// View Switcher Utility
 function showSection(sectionElement) {
   [authSection, profileSection, quizSection, dashboardSection].forEach(s => s.classList.remove('active'));
   sectionElement.classList.add('active');
 }
 
-// ==========================================
-// AUTHENTICATION FLOW (OTP / Verification Code)
-// ==========================================
+// 1. Explicit Session Check & Magic Link Hash Handler on Load
+window.addEventListener('DOMContentLoaded', async () => {
+  // Check if Supabase passed tokens in the URL hash (from Magic Link / Verification)
+  const hash = window.location.hash;
+  if (hash && (hash.includes('access_token') || hash.includes('type=signup') || hash.includes('type=magiclink'))) {
+    const { data, error } = await supabase.auth.getSessionFromUrl({ url: window.location.href });
+    if (data && data.session) {
+      currentUser = data.session.user;
+      // Clean the token hash from the URL bar
+      window.history.replaceState({}, document.title, window.location.pathname);
+      await checkProfileStatus();
+      return;
+    }
+  }
 
-// 1. Send OTP Code to Email
+  // Standard session check
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (session && session.user) {
+    currentUser = session.user;
+    await checkProfileStatus();
+  }
+});
+
+// Listen for subsequent Auth State Changes
+supabase.auth.onAuthStateChange(async (event, session) => {
+  if (session && session.user) {
+    currentUser = session.user;
+    await checkProfileStatus();
+  }
+});
+
+// 2. Authentication: Send Magic Link / Verification Code
 document.getElementById('send-magic-link-btn').addEventListener('click', async () => {
   const emailInput = document.getElementById('email-input');
-  const email = emailInput.value.trim();
   const statusEl = document.getElementById('auth-status');
+  const email = emailInput ? emailInput.value.trim() : '';
   
   if (!email) {
     statusEl.textContent = 'Please enter a valid email address.';
     return;
   }
 
-  statusEl.textContent = 'Sending verification code...';
-  pendingEmail = email;
-
-  // Send an OTP email code instead of a magic link
+  statusEl.textContent = 'Sending verification link...';
+  
+  // Use current window origin so it redirects back to your live Vercel domain correctly
   const { error } = await supabase.auth.signInWithOtp({ 
     email: email,
     options: {
-      shouldCreateUser: true
+      emailRedirectTo: window.location.origin
     }
   });
 
   if (error) {
     statusEl.textContent = 'Error: ' + error.message;
   } else {
-    statusEl.textContent = 'Verification code sent! Check your email inbox.';
-    // Reveal the verification code input box dynamically
-    document.getElementById('otp-container').style.display = 'block';
-    document.getElementById('send-magic-link-btn').style.display = 'none';
-    emailInput.disabled = true;
+    statusEl.textContent = 'Verification link sent! Check your email inbox.';
   }
 });
 
-// 2. Verify the 6-digit Code entered by User
-document.getElementById('verify-otp-btn').addEventListener('click', async () => {
-  const token = document.getElementById('otp-input').value.trim();
-  const statusEl = document.getElementById('auth-status');
-
-  if (!token || token.length < 6) {
-    statusEl.textContent = 'Please enter the full verification code from your email.';
-    return;
-  }
-
-  statusEl.textContent = 'Verifying code...';
-
-  // Verify the OTP token against Supabase
-  const { data, error } = await supabase.auth.verifyOtp({
-    email: pendingEmail,
-    token: token,
-    type: 'email'
-  });
-
-  if (error) {
-    statusEl.textContent = 'Verification failed: ' + error.message;
-  } else if (data?.session) {
-    currentUser = data.session.user;
-    statusEl.textContent = 'Email verified successfully! Loading your space...';
-    setTimeout(async () => {
-      await checkProfileStatus();
-    }, 800);
-  }
-});
-
-// Check Session on Page Load (for returning users)
-window.addEventListener('DOMContentLoaded', async () => {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session) {
-    currentUser = session.user;
-    await checkProfileStatus();
-  }
-});
-
-// ==========================================
-// PROFILE CHECK & ONBOARDING FLOW
-// ==========================================
-
+// 3. Check Profile Status in Database
 async function checkProfileStatus() {
+  if (!currentUser) return;
+
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', currentUser.id)
-    .single();
+    .maybeSingle();
 
   if (profile) {
+    // Profile exists, proceed to questionnaire / dashboard
     await loadQuestionnaire();
   } else {
+    // Profile does not exist yet, show profile setup form
     showSection(profileSection);
   }
 }
 
-// 3. Save Profile
+// 4. Save User Profile
 document.getElementById('save-profile-btn').addEventListener('click', async () => {
   const fullName = document.getElementById('full-name').value.trim();
   const location = document.getElementById('location').value.trim();
@@ -143,19 +126,16 @@ document.getElementById('save-profile-btn').addEventListener('click', async () =
   }
 });
 
-// ==========================================
-// QUESTIONNAIRE ENGINE
-// ==========================================
-
+// 5. Load & Render Questionnaire
 async function loadQuestionnaire() {
   showSection(quizSection);
   const container = document.getElementById('quiz-container');
-  container.innerHTML = '<p>Loading your questionnaire...</p>';
+  container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">Loading your questionnaire...</p>';
 
   const { data: questions, error } = await supabase.from('questions').select('*').order('id', { ascending: true });
 
-  if (error || !questions.length) {
-    container.innerHTML = '<p>Unable to load questions.</p>';
+  if (error || !questions || !questions.length) {
+    container.innerHTML = '<p style="text-align: center; color: var(--accent);">Unable to load questions. Please check database tables.</p>';
     return;
   }
 
@@ -165,11 +145,11 @@ async function loadQuestionnaire() {
   questions.forEach((q, idx) => {
     const card = document.createElement('div');
     card.className = 'question-card';
-    let optionsHTML = '';
     
+    let optionsHTML = '';
     q.options.forEach(opt => {
       optionsHTML += `
-        <button class="option-btn" data-qid="${q.id}" data-optid="${opt.id}">
+        <button type="button" class="option-btn" data-qid="${q.id}" data-optid="${opt.id}">
           ${opt.label}
         </button>
       `;
@@ -184,19 +164,20 @@ async function loadQuestionnaire() {
     container.appendChild(card);
   });
 
-  // Attach option selection events
+  // Attach option selection event listeners
   document.querySelectorAll('.option-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const qid = e.target.getAttribute('data-qid');
       const optid = e.target.getAttribute('data-optid');
 
-      // Highlight selected button
+      // Update UI selection styling
       document.querySelectorAll(`.option-btn[data-qid="${qid}"]`).forEach(b => b.classList.remove('selected'));
       e.target.classList.add('selected');
 
+      // Store answer
       userAnswersMap[qid] = optid;
 
-      // Show submit button if all answered
+      // Show submit button once all questions have been answered
       if (Object.keys(userAnswersMap).length === quizQuestions.length) {
         document.getElementById('submit-quiz-btn').style.display = 'block';
       }
@@ -204,7 +185,7 @@ async function loadQuestionnaire() {
   });
 }
 
-// 5. Submit Answers
+// 6. Submit Questionnaire Answers
 document.getElementById('submit-quiz-btn').addEventListener('click', async () => {
   const payload = Object.keys(userAnswersMap).map(qid => ({
     user_id: currentUser.id,
