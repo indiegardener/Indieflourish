@@ -114,8 +114,35 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // 6. Sign Out Listener
-  const signOutBtn = document.getElementById('sign-out-btn');
+  // 6. Hamburger Menu & Dropdown Listeners
+  const menuToggleBtn = document.getElementById('menu-toggle-btn');
+  const dropdownMenu = document.getElementById('dropdown-menu');
+
+  if (menuToggleBtn && dropdownMenu) {
+    menuToggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdownMenu.classList.toggle('show');
+    });
+
+    document.addEventListener('click', () => {
+      dropdownMenu.classList.remove('show');
+    });
+  }
+
+  // 7. Dropdown Action Handlers
+  const profilePreviewBtn = document.getElementById('menu-profile-preview');
+  const signOutBtn = document.getElementById('menu-sign-out');
+  const deleteAccountBtn = document.getElementById('menu-delete-account');
+  const profileModal = document.getElementById('profile-modal');
+  const closeModalBtn = document.getElementById('close-modal-btn');
+
+  if (profilePreviewBtn) {
+    profilePreviewBtn.addEventListener('click', async () => {
+      dropdownMenu.classList.remove('show');
+      await showProfilePreview();
+    });
+  }
+
   if (signOutBtn) {
     signOutBtn.addEventListener('click', async () => {
       await supabaseClient.auth.signOut();
@@ -125,7 +152,22 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // 7. Swipe Button Listeners
+  if (deleteAccountBtn) {
+    deleteAccountBtn.addEventListener('click', async () => {
+      dropdownMenu.classList.remove('show');
+      if (confirm('Are you sure you want to delete your account? This will remove your profile and answers.')) {
+        await deleteUserAccount();
+      }
+    });
+  }
+
+  if (closeModalBtn && profileModal) {
+    closeModalBtn.addEventListener('click', () => {
+      profileModal.classList.remove('show');
+    });
+  }
+
+  // 8. Swipe Button Listeners
   const passBtn = document.getElementById('pass-btn');
   const connectBtn = document.getElementById('connect-btn');
 
@@ -209,7 +251,6 @@ async function loadDashboard() {
 
   deckContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding-top: 100px;">Finding like-minded people...</p>';
 
-  // Fetch other profiles except current user
   const { data: profiles, error } = await supabaseClient
     .from('profiles')
     .select('*')
@@ -220,7 +261,7 @@ async function loadDashboard() {
       <div style="text-align: center; padding-top: 60px;">
         <p style="font-weight: 600; font-size: 1.1rem; color: var(--primary);">You are an early pioneer!</p>
         <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 8px;">
-          No other profiles available right now. Check back soon as more users complete their questionnaire!
+          No other profiles available right now. Check back soon!
         </p>
       </div>
     `;
@@ -248,13 +289,11 @@ function renderDeck() {
     return;
   }
 
-  // Render current active card
   const profile = availableProfiles[currentCardIndex];
   const card = document.createElement('div');
   card.className = 'profile-card';
   card.id = 'active-swipe-card';
 
-  // Placeholder match score calculation
   const matchPercentage = Math.floor(Math.random() * 20) + 80;
 
   card.innerHTML = `
@@ -271,7 +310,7 @@ function renderDeck() {
       </div>
     </div>
     <div class="card-intent">
-      🌱 Intent: <strong>${escapeHTML(profile.intent || 'Both Romantic & Platonic')}</strong>
+      🌱 Intent: <strong>${escapeHTML(profile.intent || 'Both')}</strong>
     </div>
   `;
 
@@ -335,6 +374,41 @@ function attachSwipeEvents(card) {
   card.addEventListener('touchstart', onStart, { passive: true });
   card.addEventListener('touchmove', onMove, { passive: true });
   card.addEventListener('touchend', onEnd);
+}
+
+async function showProfilePreview() {
+  const modal = document.getElementById('profile-modal');
+  const detailsEl = document.getElementById('modal-profile-details');
+  detailsEl.innerHTML = 'Loading your profile...';
+  modal.classList.add('show');
+
+  const { data: profile } = await supabaseClient
+    .from('profiles')
+    .select('*')
+    .eq('id', currentUser.id)
+    .single();
+
+  if (profile) {
+    detailsEl.innerHTML = `
+      <p style="margin-bottom: 8px;"><strong>Name:</strong> ${escapeHTML(profile.full_name)}</p>
+      <p style="margin-bottom: 8px;"><strong>Location:</strong> ${escapeHTML(profile.location_name)}</p>
+      <p style="margin-bottom: 8px;"><strong>Intent:</strong> ${escapeHTML(profile.intent)}</p>
+      <p style="margin-top: 10px;"><strong>Bio:</strong><br/>"${escapeHTML(profile.bio)}"</p>
+    `;
+  } else {
+    detailsEl.innerHTML = 'Profile not found.';
+  }
+}
+
+async function deleteUserAccount() {
+  // Delete user answers & profile data
+  await supabaseClient.from('user_answers').delete().eq('user_id', currentUser.id);
+  await supabaseClient.from('profiles').delete().eq('id', currentUser.id);
+  await supabaseClient.auth.signOut();
+  currentUser = null;
+  userAnswersMap = {};
+  showSection('auth-section');
+  alert('Your account data has been deleted.');
 }
 
 function escapeHTML(str) {
