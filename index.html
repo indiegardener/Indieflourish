@@ -13,347 +13,24 @@
   <meta name="apple-mobile-web-app-title" content="Indieflourish" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
 
-  <!-- Supabase JS Client (v2 CDN) -->
+  <!-- External Stylesheet & Supabase SDK -->
+  <link rel="stylesheet" href="style.css?v=1" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <style>
-    :root {
-      --bg-color: #fbf8f3;
-      --card-bg: #ffffff;
-      --text-main: #2b2d2f;
-      --text-muted: #62666a;
-      --primary: #2d4a3e;
-      --primary-light: #eaf1ed;
-      --accent: #d97757;
-      --border: #e2ded8;
-      --radius: 12px;
-      --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    
-    body {
-      background-color: var(--bg-color);
-      color: var(--text-main);
-      font-family: var(--font);
-      line-height: 1.6;
-      display: flex;
-      justify-content: center;
-      min-height: 100vh;
-      padding: 16px;
-      overflow-x: hidden;
-    }
-
-    #app-container {
-      width: 100%;
-      max-width: 520px;
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.03);
-      display: flex;
-      flex-direction: column;
-      position: relative;
-    }
-
-    header {
-      text-align: center;
-      margin-bottom: 20px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    header h1 {
-      font-size: 1.6rem;
-      color: var(--primary);
-      font-weight: 700;
-      letter-spacing: -0.5px;
-    }
-
-    header p {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      margin-top: 2px;
-    }
-
-    .section { display: none; }
-    .section.active { display: block; }
-
-    .form-group { margin-bottom: 18px; }
-
-    label {
-      display: block;
-      font-weight: 600;
-      font-size: 0.88rem;
-      margin-bottom: 6px;
-    }
-
-    input, select, textarea {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 1rem;
-      font-family: inherit;
-      background-color: #faf9f7;
-    }
-
-    input:focus, select:focus, textarea:focus {
-      outline: 2px solid var(--primary);
-      background-color: #fff;
-    }
-
-    button {
-      width: 100%;
-      padding: 14px;
-      background-color: var(--primary);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s ease;
-    }
-
-    button:hover { background-color: #233a30; }
-
-    .question-card {
-      background: #faf9f7;
-      border: 1px solid var(--border);
-      padding: 18px;
-      border-radius: 10px;
-      margin-bottom: 20px;
-    }
-
-    .option-btn {
-      display: block;
-      width: 100%;
-      text-align: left;
-      background: #fff;
-      color: var(--text-main);
-      border: 1px solid var(--border);
-      padding: 12px;
-      margin-top: 8px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: normal;
-    }
-
-    .option-btn.selected {
-      border-color: var(--primary);
-      background-color: var(--primary-light);
-      font-weight: 600;
-    }
-
-    .badge {
-      display: inline-block;
-      padding: 4px 10px;
-      background-color: var(--primary-light);
-      color: var(--primary);
-      border-radius: 20px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      margin-bottom: 8px;
-    }
-
-    .status-msg {
-      margin-top: 12px;
-      font-size: 0.88rem;
-      text-align: center;
-      color: var(--accent);
-    }
-
-    /* Dashboard Header & Hamburger Menu */
-    .dashboard-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-      position: relative;
-    }
-
-    .menu-btn {
-      background: none;
-      border: none;
-      color: var(--primary);
-      font-size: 1.5rem;
-      cursor: pointer;
-      padding: 4px 8px;
-      width: auto;
-    }
-
-    .dropdown-menu {
-      position: absolute;
-      right: 0;
-      top: 40px;
-      background: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-      width: 180px;
-      display: none;
-      z-index: 100;
-      overflow: hidden;
-    }
-
-    .dropdown-menu.show { display: block; }
-
-    .dropdown-item {
-      padding: 12px 16px;
-      font-size: 0.9rem;
-      color: var(--text-main);
-      background: none;
-      border: none;
-      width: 100%;
-      text-align: left;
-      cursor: pointer;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .dropdown-item:last-child { border-bottom: none; }
-    .dropdown-item:hover { background-color: var(--primary-light); }
-    .dropdown-item.danger { color: #d9534f; }
-
-    /* Swipe Deck Styles */
-    .deck-container {
-      position: relative;
-      width: 100%;
-      height: 380px;
-      margin-top: 10px;
-      margin-bottom: 20px;
-      perspective: 1000px;
-    }
-
-    .profile-card {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      background: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 20px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.06);
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      user-select: none;
-      touch-action: pan-y;
-      transition: transform 0.3s ease, opacity 0.3s ease;
-      cursor: grab;
-    }
-
-    .profile-card:active { cursor: grabbing; }
-
-    .card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 12px;
-    }
-
-    .card-name {
-      font-size: 1.35rem;
-      font-weight: 700;
-      color: var(--primary);
-    }
-
-    .card-location {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-    }
-
-    .card-match-badge {
-      background-color: var(--primary-light);
-      color: var(--primary);
-      font-weight: 700;
-      font-size: 0.85rem;
-      padding: 6px 12px;
-      border-radius: 20px;
-      white-space: nowrap;
-    }
-
-    .card-bio {
-      font-size: 0.95rem;
-      color: var(--text-main);
-      background: #faf9f7;
-      padding: 14px;
-      border-radius: 8px;
-      border-left: 3px solid var(--primary);
-      margin-bottom: 12px;
-      flex-grow: 1;
-      overflow-y: auto;
-    }
-
-    .card-intent {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      text-transform: capitalize;
-    }
-
-    .swipe-controls {
-      display: flex;
-      gap: 16px;
-      justify-content: center;
-      margin-top: 10px;
-      margin-bottom: 16px;
-    }
-
-    .swipe-btn {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      font-size: 1.5rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-      border: 2px solid var(--border);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    }
-
-    .swipe-btn.pass {
-      background: #ffffff;
-      color: #d9534f;
-      border-color: #f5c6cb;
-    }
-
-    .swipe-btn.connect {
-      background: var(--primary);
-      color: #ffffff;
-      border-color: var(--primary);
-    }
-
-    /* Modal for Profile Preview */
-    .modal {
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-      padding: 20px;
-    }
-    .modal.show { display: flex; }
-    .modal-content {
-      background: #fff;
-      padding: 24px;
-      border-radius: 12px;
-      width: 100%;
-      max-width: 400px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-    }
-  </style>
 </head>
 <body>
 
 <div id="app-container">
-  <header>
-    <h1>Indieflourish</h1>
-    <p>A non-profit space to bloom & connect deeply</p>
+  <!-- Top Navigation Header (Indieflourish Left, Menu Right) -->
+  <header class="app-header">
+    <h1 class="brand-title">Indieflourish</h1>
+    <div class="menu-container">
+      <button type="button" class="menu-btn" id="menu-toggle-btn" title="Menu">☰</button>
+      <div id="dropdown-menu" class="dropdown-menu">
+        <button type="button" class="dropdown-item" id="menu-profile-preview">👤 Profile Preview</button>
+        <button type="button" class="dropdown-item" id="menu-sign-out">🚪 Sign Out</button>
+        <button type="button" class="dropdown-item danger" id="menu-delete-account">⚠️ Delete Account</button>
+      </div>
+    </div>
   </header>
 
   <!-- SECTION 1: AUTHENTICATION -->
@@ -407,24 +84,14 @@
 
   <!-- SECTION 4: DASHBOARD / SWIPE MATCHES -->
   <div id="dashboard-section" class="section">
-    <div class="dashboard-header">
-      <div>
-        <h2 style="font-size: 1.2rem; color: var(--primary);">Discover Profiles</h2>
-        <span style="font-size: 0.75rem; color: var(--text-muted);">Active Chat: 0 / 3</span>
-      </div>
-      <div style="position: relative;">
-        <button type="button" class="menu-btn" id="menu-toggle-btn" title="Menu">☰</button>
-        <div id="dropdown-menu" class="dropdown-menu">
-          <button type="button" class="dropdown-item" id="menu-profile-preview">👤 Profile Preview</button>
-          <button type="button" class="dropdown-item" id="menu-sign-out">🚪 Sign Out</button>
-          <button type="button" class="dropdown-item danger" id="menu-delete-account">⚠️ Delete Account</button>
-        </div>
-      </div>
+    <div class="deck-subheader">
+      <span style="font-weight: 600; color: var(--primary);">Discover Profiles</span>
+      <span style="font-size: 0.75rem; color: var(--text-muted);">Active Chat: 0 / 3</span>
     </div>
 
-    <!-- Container for Stacked Cards -->
+    <!-- Larger Container for Stacked Cards -->
     <div id="deck-container" class="deck-container">
-      <p style="text-align: center; color: var(--text-muted); padding-top: 100px;">Finding like-minded people...</p>
+      <p style="text-align: center; color: var(--text-muted); padding-top: 140px;">Finding like-minded people...</p>
     </div>
 
     <!-- Action Buttons -->
@@ -447,7 +114,7 @@
 </div>
 
 <!-- SINGLE app.js inclusion -->
-<script src="app.js?v=5"></script>
+<script src="app.js?v=6"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
