@@ -31,11 +31,12 @@ body {
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 24px;
+  padding: 20px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.03);
   display: flex;
   flex-direction: column;
   position: relative;
+  min-height: 85vh;
 }
 
 /* Top Header Bar */
@@ -43,8 +44,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -103,6 +104,13 @@ body {
 
 .section { display: none; }
 .section.active { display: block; }
+
+/* Dashboard layout fills remaining vertical space to pin buttons at bottom */
+#dashboard-section.active {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
 
 .form-group { margin-bottom: 18px; }
 
@@ -194,17 +202,17 @@ button:hover { background-color: #233a30; }
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
-/* Larger Swipe Deck Styles */
+/* Stretched Swipe Deck Styles */
 .deck-container {
   position: relative;
   width: 100%;
-  height: 440px; /* Increased height for a larger profile card */
-  margin-top: 5px;
-  margin-bottom: 20px;
+  height: 520px; /* Significantly taller profile card window */
+  margin-bottom: 16px;
   perspective: 1000px;
+  flex-grow: 1;
 }
 
 .profile-card {
@@ -214,7 +222,7 @@ button:hover { background-color: #233a30; }
   background: #ffffff;
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 22px;
+  padding: 24px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.06);
   display: flex;
   flex-direction: column;
@@ -231,68 +239,69 @@ button:hover { background-color: #233a30; }
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .card-name {
-  font-size: 1.4rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: var(--primary);
 }
 
 .card-location {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   color: var(--text-muted);
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 .card-match-badge {
   background-color: var(--primary-light);
   color: var(--primary);
   font-weight: 700;
-  font-size: 0.85rem;
-  padding: 6px 12px;
+  font-size: 0.9rem;
+  padding: 6px 14px;
   border-radius: 20px;
   white-space: nowrap;
 }
 
 .card-bio {
-  font-size: 1rem;
+  font-size: 1.05rem;
   color: var(--text-main);
   background: #faf9f7;
-  padding: 16px;
-  border-radius: 8px;
-  border-left: 3px solid var(--primary);
-  margin-bottom: 12px;
+  padding: 18px;
+  border-radius: 10px;
+  border-left: 4px solid var(--primary);
+  margin-bottom: 16px;
   flex-grow: 1;
   overflow-y: auto;
 }
 
 .card-intent {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: var(--text-muted);
   text-transform: capitalize;
 }
 
+/* Pinned at the bottom */
 .swipe-controls {
   display: flex;
-  gap: 20px;
+  gap: 24px;
   justify-content: center;
-  margin-top: 10px;
-  margin-bottom: 10px;
+  margin-top: auto;
+  padding-bottom: 6px;
 }
 
 .swipe-btn {
-  width: 64px;
-  height: 64px;
+  width: 68px;
+  height: 68px;
   border-radius: 50%;
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   border: 2px solid var(--border);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
 }
 
 .swipe-btn.pass {
