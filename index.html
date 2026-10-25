@@ -8,6 +8,7 @@
   <!-- PWA Meta Tags & Manifest -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#2d4a3e" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Indieflourish" />
@@ -64,7 +65,7 @@
 
     header h1 {
       font-size: 1.75rem;
-      color: var(--primary);
+      color:(--primary);
       font-weight: 700;
       letter-spacing: -0.5px;
     }
@@ -185,7 +186,7 @@
       <label for="email-input">Email Address</label>
       <input type="email" id="email-input" placeholder="you@example.com" required />
     </div>
-    <button id="send-magic-link-btn">Send Verification Code</button>
+    <button type="button" id="send-magic-link-btn">Send Verification Code</button>
     <div id="auth-status" class="status-msg"></div>
   </div>
 
@@ -215,15 +216,13 @@
       <label for="bio">Personal Reflection (Max 500 chars)</label>
       <textarea id="bio" rows="3" placeholder="Share what brings you joy, your quiet routines, or what you hope to cultivate..."></textarea>
     </div>
-    <button id="save-profile-btn">Save Profile & Begin Quiz</button>
+    <button type="button" id="save-profile-btn">Save Profile & Begin Quiz</button>
   </div>
 
   <!-- SECTION 3: QUESTIONNAIRE -->
   <div id="quiz-section" class="section">
-    <div id="quiz-container">
-      <!-- Questionnaire dynamic render -->
-    </div>
-    <button id="submit-quiz-btn" style="display: none;">Submit Responses</button>
+    <div id="quiz-container"></div>
+    <button type="button" id="submit-quiz-btn" style="display: none;">Submit Responses</button>
   </div>
 
   <!-- SECTION 4: DASHBOARD / MATCHES -->
@@ -240,7 +239,8 @@
   </div>
 </div>
 
-<script src="app.js?v=2"></script>
+<!-- SINGLE app.js inclusion -->
+<script src="app.js?v=3"></script>
 <script>
   // Register Service Worker for PWA
   if ('serviceWorker' in navigator) {
