@@ -39,11 +39,26 @@ document.getElementById('send-magic-link-btn').addEventListener('click', async (
   }
 });
 
-// Check Session and Handle Magic Link Hash on Load
+// Check Session and Handle Magic Link Redirects on Load
 window.addEventListener('DOMContentLoaded', async () => {
-  // Give Supabase a brief moment to process hash tokens if coming from a magic link
+  // 1. If Supabase sent an authorization code in the URL query params (?code=...)
+  const urlParams = new URLSearchParams(window.location.search);
+  const authCode = urlParams.get('code');
+
+  if (authCode) {
+    // Exchange the code for an active session
+    const { data, error } = await supabase.auth.exchangeCodeForSession(authCode);
+    if (data?.session) {
+      currentUser = data.session.user;
+      // Clean up the URL query parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+      await checkProfileStatus();
+      return;
+    }
+  }
+
+  // 2. If Supabase sent tokens in the URL hash (#access_token=...)
   if (window.location.hash && window.location.hash.includes('access_token')) {
-    // Wait for Supabase client to initialize the session from the URL hash
     await new Promise(resolve => setTimeout(resolve, 500));
   }
 
@@ -51,7 +66,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   
   if (session) {
     currentUser = session.user;
-    // Clean up the URL hash so it looks clean in the browser
     if (window.location.hash) {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
