@@ -12,6 +12,7 @@ const dashboardSection = document.getElementById('dashboard-section');
 let currentUser = null;
 let quizQuestions = [];
 let userAnswersMap = {};
+let pendingEmail = '';
 
 // View Switcher
 function showSection(sectionElement) {
@@ -19,9 +20,14 @@ function showSection(sectionElement) {
   sectionElement.classList.add('active');
 }
 
-// 1. Magic Link Auth
+// ==========================================
+// AUTHENTICATION FLOW (OTP / Verification Code)
+// ==========================================
+
+// 1. Send OTP Code to Email
 document.getElementById('send-magic-link-btn').addEventListener('click', async () => {
-  const email = document.getElementById('email-input').value.trim();
+  const emailInput = document.getElementById('email-input');
+  const email = emailInput.value.trim();
   const statusEl = document.getElementById('auth-status');
   
   if (!email) {
@@ -29,56 +35,71 @@ document.getElementById('send-magic-link-btn').addEventListener('click', async (
     return;
   }
 
-  statusEl.textContent = 'Sending Magic Link...';
-  const { error } = await supabase.auth.signInWithOtp({ email });
+  statusEl.textContent = 'Sending verification code...';
+  pendingEmail = email;
+
+  // Send an OTP email code instead of a magic link
+  const { error } = await supabase.auth.signInWithOtp({ 
+    email: email,
+    options: {
+      shouldCreateUser: true
+    }
+  });
 
   if (error) {
     statusEl.textContent = 'Error: ' + error.message;
   } else {
-    statusEl.textContent = 'Magic Link sent! Check your email inbox.';
+    statusEl.textContent = 'Verification code sent! Check your email inbox.';
+    // Reveal the verification code input box dynamically
+    document.getElementById('otp-container').style.display = 'block';
+    document.getElementById('send-magic-link-btn').style.display = 'none';
+    emailInput.disabled = true;
   }
 });
 
-// Check Session and Handle Magic Link Redirects on Load
-window.addEventListener('DOMContentLoaded', async () => {
-  // 1. Handle PKCE authorization code if passed in query params (?code=...)
-  const urlParams = new URLSearchParams(window.location.search);
-  const authCode = urlParams.get('code');
+// 2. Verify the 6-digit Code entered by User
+document.getElementById('verify-otp-btn').addEventListener('click', async () => {
+  const token = document.getElementById('otp-input').value.trim();
+  const statusEl = document.getElementById('auth-status');
 
-  if (authCode) {
-    const { data, error } = await supabase.auth.exchangeCodeForSession(authCode);
-    if (data?.session) {
-      currentUser = data.session.user;
-      window.history.replaceState({}, document.title, window.location.pathname);
-      await checkProfileStatus();
-      return;
-    }
+  if (!token || token.length < 6) {
+    statusEl.textContent = 'Please enter the full verification code from your email.';
+    return;
   }
 
-  // 2. Standard session check from browser storage
-  const { data: { session }, error } = await supabase.auth.getSession();
-  
+  statusEl.textContent = 'Verifying code...';
+
+  // Verify the OTP token against Supabase
+  const { data, error } = await supabase.auth.verifyOtp({
+    email: pendingEmail,
+    token: token,
+    type: 'email'
+  });
+
+  if (error) {
+    statusEl.textContent = 'Verification failed: ' + error.message;
+  } else if (data?.session) {
+    currentUser = data.session.user;
+    statusEl.textContent = 'Email verified successfully! Loading your space...';
+    setTimeout(async () => {
+      await checkProfileStatus();
+    }, 800);
+  }
+});
+
+// Check Session on Page Load (for returning users)
+window.addEventListener('DOMContentLoaded', async () => {
+  const { data: { session } } = await supabase.auth.getSession();
   if (session) {
     currentUser = session.user;
-    if (window.location.hash || window.location.search) {
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
     await checkProfileStatus();
   }
 });
 
-// Single Unified Auth State Change Listener
-supabase.auth.onAuthStateChange(async (event, session) => {
-  if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
-    currentUser = session.user;
-    if (window.location.hash || window.location.search) {
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-    await checkProfileStatus();
-  }
-});
+// ==========================================
+// PROFILE CHECK & ONBOARDING FLOW
+// ==========================================
 
-// 2. Check Profile Status
 async function checkProfileStatus() {
   const { data: profile, error } = await supabase
     .from('profiles')
@@ -122,7 +143,10 @@ document.getElementById('save-profile-btn').addEventListener('click', async () =
   }
 });
 
-// 4. Load & Render Questionnaire
+// ==========================================
+// QUESTIONNAIRE ENGINE
+// ==========================================
+
 async function loadQuestionnaire() {
   showSection(quizSection);
   const container = document.getElementById('quiz-container');
@@ -141,8 +165,8 @@ async function loadQuestionnaire() {
   questions.forEach((q, idx) => {
     const card = document.createElement('div');
     card.className = 'question-card';
-    
     let optionsHTML = '';
+    
     q.options.forEach(opt => {
       optionsHTML += `
         <button class="option-btn" data-qid="${q.id}" data-optid="${opt.id}">
