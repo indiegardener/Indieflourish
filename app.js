@@ -243,7 +243,7 @@ async function loadQuestionnaire() {
   });
 }
 
-// DASHBOARD & SWIPE DECK LOGIC WITH BACKEND MATCHING
+// DASHBOARD & SWIPE DECK LOGIC WITH 30-DAY LEFT-SWIPE EXPIRATION
 async function loadDashboard() {
   showSection('dashboard-section');
   const deckContainer = document.getElementById('deck-container');
@@ -251,21 +251,38 @@ async function loadDashboard() {
 
   deckContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding-top: 100px;">Finding like-minded people...</p>';
 
-  // Fetch profiles the user has already interacted with (sent or received requests)
+  // Fetch all connections involving current user
   const { data: existingConnections } = await supabaseClient
     .from('connections')
-    .select('requester_id, receiver_id')
+    .select('requester_id, receiver_id, status, created_at')
     .or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
 
-  const interactedUserIds = new Set([currentUser.id]);
+  // Define 30-day expiration window
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const excludedUserIds = new Set([currentUser.id]);
+
   if (existingConnections) {
     existingConnections.forEach(c => {
-      interactedUserIds.add(c.requester_id);
-      interactedUserIds.add(c.receiver_id);
+      const otherId = c.requester_id === currentUser.id ? c.receiver_id : c.requester_id;
+
+      if (c.status === 'accepted' || c.status === 'pending') {
+        // Active matches or pending requests are always excluded
+        excludedUserIds.add(otherId);
+      } else if (c.status === 'rejected' && c.requester_id === currentUser.id) {
+        // Left swipe (rejection) by current user: check if within 30 days
+        const createdAt = new Date(c.created_at);
+        if (createdAt > thirtyDaysAgo) {
+          // Still active cooldown period (less than 30 days)
+          excludedUserIds.add(otherId);
+        }
+        // If older than 30 days, it has expired! Profile will show again.
+      }
     });
   }
 
-  // Fetch only unswiped profiles
+  // Fetch all profiles
   const { data: profiles, error } = await supabaseClient
     .from('profiles')
     .select('*');
@@ -275,7 +292,7 @@ async function loadDashboard() {
     return;
   }
 
-  availableProfiles = profiles.filter(p => !interactedUserIds.has(p.id));
+  availableProfiles = profiles.filter(p => !excludedUserIds.has(p.id));
   currentCardIndex = 0;
   
   await updateActiveChatCount();
@@ -305,7 +322,7 @@ function renderDeck() {
       <div style="text-align: center; padding-top: 100px;">
         <p style="font-weight: 600; font-size: 1.1rem; color: var(--primary);">All caught up!</p>
         <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 8px;">
-          You have viewed all available profiles. New people will appear here as they join!
+          You have viewed all available profiles. Expired left swipes and new members will appear here over time!
         </p>
       </div>
     `;
@@ -351,8 +368,12 @@ async function swipeCurrentCard(direction) {
   card.style.transform = `translate(${moveX}px, 50px) rotate(${direction === 'right' ? 25 : -25}deg)`;
   card.style.opacity = '0';
 
-  if (direction === 'right' && targetProfile) {
-    await handleRightSwipe(targetProfile);
+  if (targetProfile) {
+    if (direction === 'right') {
+      await handleRightSwipe(targetProfile);
+    } else if (direction === 'left') {
+      await handleLeftSwipe(targetProfile);
+    }
   }
 
   setTimeout(() => {
@@ -362,7 +383,6 @@ async function swipeCurrentCard(direction) {
 }
 
 async function handleRightSwipe(targetProfile) {
-  // Check if target profile already sent a request to current user
   const { data: incomingRequest } = await supabaseClient
     .from('connections')
     .select('*')
@@ -371,7 +391,6 @@ async function handleRightSwipe(targetProfile) {
     .single();
 
   if (incomingRequest) {
-    // IT'S A MATCH! Update status to accepted
     const { error } = await supabaseClient
       .from('connections')
       .update({ status: 'accepted', updated_at: new Date().toISOString() })
@@ -382,13 +401,21 @@ async function handleRightSwipe(targetProfile) {
       await updateActiveChatCount();
     }
   } else {
-    // Send new pending connection request
     await supabaseClient
       .from('connections')
-      .insert([
+      .upsert([
         { requester_id: currentUser.id, receiver_id: targetProfile.id, status: 'pending' }
-      ]);
+      ], { onConflict: 'requester_id,receiver_id' });
   }
+}
+
+async function handleLeftSwipe(targetProfile) {
+  // Record left swipe as 'rejected' with timestamp
+  await supabaseClient
+    .from('connections')
+    .upsert([
+      { requester_id: currentUser.id, receiver_id: targetProfile.id, status: 'rejected', created_at: new Date().toISOString() }
+    ], { onConflict: 'requester_id,receiver_id' });
 }
 
 function attachSwipeEvents(card) {
