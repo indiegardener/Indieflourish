@@ -41,50 +41,44 @@ document.getElementById('send-magic-link-btn').addEventListener('click', async (
 
 // Check Session and Handle Magic Link Redirects on Load
 window.addEventListener('DOMContentLoaded', async () => {
-  // 1. If Supabase sent an authorization code in the URL query params (?code=...)
+  // 1. Handle PKCE authorization code if passed in query params (?code=...)
   const urlParams = new URLSearchParams(window.location.search);
   const authCode = urlParams.get('code');
 
   if (authCode) {
-    // Exchange the code for an active session
     const { data, error } = await supabase.auth.exchangeCodeForSession(authCode);
     if (data?.session) {
       currentUser = data.session.user;
-      // Clean up the URL query parameters
       window.history.replaceState({}, document.title, window.location.pathname);
       await checkProfileStatus();
       return;
     }
   }
 
-  // 2. If Supabase sent tokens in the URL hash (#access_token=...)
+  // 2. Handle Hash tokens (#access_token=...)
   if (window.location.hash && window.location.hash.includes('access_token')) {
     await new Promise(resolve => setTimeout(resolve, 500));
   }
 
+  // 3. Standard session check from browser storage
   const { data: { session }, error } = await supabase.auth.getSession();
   
   if (session) {
     currentUser = session.user;
-    if (window.location.hash) {
+    if (window.location.hash || window.location.search) {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     await checkProfileStatus();
   }
 });
 
-// Listen for Auth State Changes (Fires immediately when magic link token is processed)
+// Single Unified Auth State Change Listener
 supabase.auth.onAuthStateChange(async (event, session) => {
-  if (event === 'SIGNED_IN' && session) {
+  if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
     currentUser = session.user;
-    await checkProfileStatus();
-  }
-});
-
-// Listen for Auth State Changes (Fires immediately when magic link token is processed)
-supabase.auth.onAuthStateChange(async (event, session) => {
-  if (event === 'SIGNED_IN' && session) {
-    currentUser = session.user;
+    if (window.location.hash || window.location.search) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
     await checkProfileStatus();
   }
 });
