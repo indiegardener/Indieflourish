@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
 
   <!-- External Stylesheet & Supabase SDK -->
-  <link rel="stylesheet" href="style.css?v=11" />
+  <link rel="stylesheet" href="style.css?v=12" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -121,6 +121,27 @@
       </div>
     </div>
   </div>
+
+  <!-- SECTION 5: CHAT ENVIRONMENT -->
+  <div id="chat-section" class="section">
+    <div class="chat-header">
+      <button type="button" id="back-to-connections-btn" class="back-btn">← Back</button>
+      <!-- Clicking partner name opens profile & unmatch modal -->
+      <div class="chat-title-wrapper" id="chat-header-profile-trigger" title="View Profile & Unmatch">
+        <h3 id="chat-partner-name">Partner Name</h3>
+        <span style="font-size: 0.7rem; color: var(--text-muted);">Tap to view profile</span>
+      </div>
+    </div>
+
+    <div id="chat-messages-container" class="chat-messages">
+      <!-- Messages populate here -->
+    </div>
+
+    <div class="chat-input-area">
+      <input type="text" id="chat-message-input" placeholder="Type a thoughtful message..." />
+      <button type="button" id="send-message-btn">Send</button>
+    </div>
+  </div>
 </div>
 
 <!-- Profile Preview Modal -->
@@ -152,7 +173,19 @@
   </div>
 </div>
 
-<script src="app.js?v=11"></script>
+<!-- Partner Profile & Unmatch Modal -->
+<div id="partner-profile-modal" class="modal">
+  <div class="modal-content" style="max-width: 440px;">
+    <h3 style="color: var(--primary); margin-bottom: 12px;">Match Profile</h3>
+    <div id="partner-profile-body" style="background: #faf9f7; border: 1px solid var(--border); padding: 16px; border-radius: 10px; margin-bottom: 20px;">
+      <!-- Populated dynamically -->
+    </div>
+    <button type="button" id="unmatch-btn" style="background-color: #ffffff; color: #d9534f; border: 1px solid #f5c6cb; margin-bottom: 10px;">Unmatch Connection</button>
+    <button type="button" id="close-partner-modal-btn" style="background: var(--primary); color: #ffffff;">Close</button>
+  </div>
+</div>
+
+<script src="app.js?v=12"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
