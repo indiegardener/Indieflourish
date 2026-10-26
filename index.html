@@ -15,6 +15,10 @@
 
   <link rel="stylesheet" href="style.css?v=15" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Add in <head> of index.html -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/nsfwjs@2.4.2/dist/nsfwjs.min.js"></script>
+  
 </head>
 <body>
 
@@ -287,5 +291,33 @@
     });
   }
 </script>
+<!-- Add Report Modal at the bottom of index.html -->
+<div id="report-modal" class="modal">
+  <div class="modal-content" style="max-width: 420px;">
+    <h3 style="color: #d9534f; margin-bottom: 6px;">🚩 Report User</h3>
+    <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 14px;">Help us keep Indieflourish safe and respectful.</p>
+    
+    <div class="form-group">
+      <label for="report-reason">Reason for Report</label>
+      <select id="report-reason">
+        <option value="nudity">Nudity or Explicit/Semi-nude Content</option>
+        <option value="inappropriate_behavior">Inappropriate Behavior or Harassment</option>
+        <option value="fake_profile">Fake Profile or Spam</option>
+        <option value="other">Other Violation</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="report-details">Additional Details (Optional)</label>
+      <textarea id="report-details" rows="3" placeholder="Describe the situation..."></textarea>
+    </div>
+
+    <div style="display: flex; gap: 10px;">
+      <button type="button" id="submit-report-btn" style="background: #d9534f; color: #ffffff; flex: 1;">Submit Report</button>
+      <button type="button" id="close-report-modal-btn" style="background: var(--text-muted); color: #ffffff; flex: 1;">Cancel</button>
+    </div>
+  </div>
+</div>
+  
 </body>
 </html>
