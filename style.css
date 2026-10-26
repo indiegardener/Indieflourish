@@ -55,6 +55,25 @@ body {
   letter-spacing: -0.5px;
 }
 
+/* Donate Button Style */
+.donate-btn {
+  background-color: #fff0eb;
+  color: var(--accent);
+  border: 1px solid #f4c4b5;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  width: auto;
+  transition: all 0.2s ease;
+}
+
+.donate-btn:hover {
+  background-color: var(--accent);
+  color: #ffffff;
+}
+
 .menu-container { position: relative; }
 
 .menu-btn {
@@ -75,7 +94,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 8px;
   box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-  width: 180px;
+  width: 200px;
   display: none;
   z-index: 100;
   overflow: hidden;
@@ -83,7 +102,8 @@ body {
 
 .dropdown-menu.show { display: block; }
 
-.dropdown-item {
+.dropdown-item, .dropdown-item-link {
+  display: block;
   padding: 12px 16px;
   font-size: 0.9rem;
   color: var(--text-main);
@@ -93,10 +113,10 @@ body {
   text-align: left;
   cursor: pointer;
   border-bottom: 1px solid var(--border);
+  text-decoration: none;
 }
 
-.dropdown-item:last-child { border-bottom: none; }
-.dropdown-item:hover { background-color: var(--primary-light); }
+.dropdown-item-link:hover, .dropdown-item:hover { background-color: var(--primary-light); }
 .dropdown-item.danger { color: #d9534f; }
 
 .section { display: none; }
