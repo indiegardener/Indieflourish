@@ -8,6 +8,7 @@ let quizQuestions = [];
 let userAnswersMap = {};
 let availableProfiles = [];
 let currentCardIndex = 0;
+let currentReviewConnection = null;
 
 function showSection(sectionId) {
   const sections = ['auth-section', 'profile-section', 'quiz-section', 'dashboard-section'];
@@ -207,6 +208,46 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (closeModalBtn && profileModal) {
     closeModalBtn.addEventListener('click', () => {
       profileModal.classList.remove('show');
+    });
+  }
+
+  // Review Modal Action Listeners
+  const reviewModal = document.getElementById('review-modal');
+  const closeReviewModalBtn = document.getElementById('close-review-modal-btn');
+  const reviewPassBtn = document.getElementById('review-pass-btn');
+  const reviewConnectBtn = document.getElementById('review-connect-btn');
+
+  if (closeReviewModalBtn && reviewModal) {
+    closeReviewModalBtn.addEventListener('click', () => {
+      reviewModal.classList.remove('show');
+    });
+  }
+
+  if (reviewPassBtn) {
+    reviewPassBtn.addEventListener('click', async () => {
+      if (currentReviewConnection) {
+        await supabaseClient
+          .from('connections')
+          .update({ status: 'rejected', updated_at: new Date().toISOString() })
+          .eq('id', currentReviewConnection.id);
+        reviewModal.classList.remove('show');
+        await loadConnectionsList();
+      }
+    });
+  }
+
+  if (reviewConnectBtn) {
+    reviewConnectBtn.addEventListener('click', async () => {
+      if (currentReviewConnection) {
+        await supabaseClient
+          .from('connections')
+          .update({ status: 'accepted', updated_at: new Date().toISOString() })
+          .eq('id', currentReviewConnection.id);
+        reviewModal.classList.remove('show');
+        alert(`🎉 It's a Match! Your active chat space is now open.`);
+        await updateActiveChatCount();
+        await loadConnectionsList();
+      }
     });
   }
 
@@ -449,7 +490,7 @@ async function handleLeftSwipe(targetProfile) {
     ], { onConflict: 'requester_id,receiver_id' });
 }
 
-// CONNECTIONS & MATCHES LIST RENDERER
+// CONNECTIONS & MATCHES LIST RENDERER WITH INTERACTIVE INCOMING REVIEWS
 async function loadConnectionsList() {
   const acceptedContainer = document.getElementById('accepted-matches-container');
   const pendingContainer = document.getElementById('pending-matches-container');
@@ -478,6 +519,7 @@ async function loadConnectionsList() {
     acceptedContainer.innerHTML = '';
     accepted.forEach(c => {
       const otherUser = c.requester_id === currentUser.id ? c.receiver : c.requester;
+      if (!otherUser) return;
       const item = document.createElement('div');
       item.className = 'connection-item';
       item.innerHTML = `
@@ -498,19 +540,53 @@ async function loadConnectionsList() {
     pendingContainer.innerHTML = '';
     pending.forEach(c => {
       const otherUser = c.requester_id === currentUser.id ? c.receiver : c.requester;
+      if (!otherUser) return;
       const isSentByMe = c.requester_id === currentUser.id;
+
       const item = document.createElement('div');
-      item.className = 'connection-item';
+      item.className = `connection-item ${!isSentByMe ? 'clickable' : ''}`;
       item.innerHTML = `
         <div class="connection-info">
           <h4>${escapeHTML(otherUser.full_name)}</h4>
-          <p>${isSentByMe ? 'Request sent by you' : 'Sent you a connection request'}</p>
+          <p>${isSentByMe ? 'Request sent by you' : 'Tap to review profile & respond'}</p>
         </div>
-        <span class="status-tag pending">${isSentByMe ? 'Pending' : 'Incoming'}</span>
+        <span class="status-tag pending">${isSentByMe ? 'Pending' : 'Incoming 💌'}</span>
       `;
+
+      // If it's an incoming request, make it clickable to review
+      if (!isSentByMe) {
+        item.addEventListener('click', () => {
+          openReviewModal(c, otherUser);
+        });
+      }
+
       pendingContainer.appendChild(item);
     });
   }
+}
+
+function openReviewModal(connection, profile) {
+  currentReviewConnection = connection;
+  const reviewModal = document.getElementById('review-modal');
+  const bodyEl = document.getElementById('review-profile-body');
+
+  bodyEl.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+      <div>
+        <div style="font-size: 1.2rem; font-weight: 700; color: var(--primary);">${escapeHTML(profile.full_name)}</div>
+        <div style="font-size: 0.85rem; color: var(--text-muted);">📍 ${escapeHTML(profile.location_name)}</div>
+      </div>
+      <div style="background: var(--primary-light); color: var(--primary); font-weight: 700; font-size: 0.8rem; padding: 4px 10px; border-radius: 12px;">Incoming Like</div>
+    </div>
+    <div style="font-size: 0.95rem; color: var(--text-main); background: #fff; padding: 12px; border-radius: 8px; border-left: 3px solid var(--primary); margin-bottom: 10px;">
+      "${escapeHTML(profile.bio || 'No bio provided.')}"
+    </div>
+    <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: capitalize;">
+      🌱 Intent: <strong>${escapeHTML(profile.intent || 'Both')}</strong>
+    </div>
+  `;
+
+  reviewModal.classList.add('show');
 }
 
 function attachSwipeEvents(card) {
