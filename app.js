@@ -14,6 +14,27 @@ let activeChatPartner = null;
 let uploadedImageUrlsTemp = [];
 let tempLatitude = null;
 let tempLongitude = null;
+let nsfwModel = null;
+let activeReportTargetId = null;
+
+// Load NSFWJS model for client-side content moderation
+async function loadModerationModel() {
+  if (window.nsfwjs) {
+    nsfwModel = await nsfwjs.load();
+  }
+}
+loadModerationModel();
+
+// Client-Side Image Scan for Nudity / Explicit Content
+async function isImageSafe(imageElement) {
+  if (!nsfwModel) return true;
+  const predictions = await nsfwModel.classify(imageElement);
+  const nsfwScore = predictions.find(p => p.className === 'Porn' || p.className === 'Sexy' || p.className === 'Hentai');
+  if (nsfwScore && nsfwScore.probability > 0.60) {
+    return false;
+  }
+  return true;
+}
 
 function showSection(sectionId) {
   const sections = ['auth-section', 'profile-section', 'photos-prompt-section', 'quiz-section', 'dashboard-section', 'chat-section'];
@@ -352,6 +373,42 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Report Modal Listeners
+  const closeReportModalBtn = document.getElementById('close-report-modal-btn');
+  const submitReportBtn = document.getElementById('submit-report-btn');
+  const reportModal = document.getElementById('report-modal');
+
+  if (closeReportModalBtn && reportModal) {
+    closeReportModalBtn.addEventListener('click', () => {
+      reportModal.classList.remove('show');
+    });
+  }
+
+  if (submitReportBtn) {
+    submitReportBtn.addEventListener('click', async () => {
+      const reason = document.getElementById('report-reason').value;
+      const details = document.getElementById('report-details').value.trim();
+
+      if (!activeReportTargetId) return;
+
+      const { error } = await supabaseClient.from('reports').insert([
+        {
+          reporter_id: currentUser.id,
+          reported_user_id: activeReportTargetId,
+          reason: reason,
+          details: details
+        }
+      ]);
+
+      if (error) {
+        alert('Error submitting report: ' + error.message);
+      } else {
+        reportModal.classList.remove('show');
+        alert('Thank you. The profile has been reported to our moderation team for review.');
+      }
+    });
+  }
+
   const reviewModal = document.getElementById('review-modal');
   const closeReviewModalBtn = document.getElementById('close-review-modal-btn');
   const reviewPassBtn = document.getElementById('review-pass-btn');
@@ -429,7 +486,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (connectBtn) connectBtn.addEventListener('click', () => swipeCurrentCard('right'));
 });
 
-// Helper: Detect Device Geolocation and Reverse Geocode via OpenStreetMap Nominatim API
+// Helper: Detect Device Geolocation & Reverse Geocode via OpenStreetMap Nominatim
 function detectUserGeolocation(inputId) {
   const inputEl = document.getElementById(inputId);
   if (!navigator.geolocation) {
@@ -444,7 +501,6 @@ function detectUserGeolocation(inputId) {
     tempLongitude = position.coords.longitude;
 
     try {
-      // Reverse geocode lat/lng to readable city name using free OpenStreetMap Nominatim API
       const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${tempLatitude}&lon=${tempLongitude}`);
       const data = await response.json();
       
@@ -464,45 +520,55 @@ function detectUserGeolocation(inputId) {
   }, { timeout: 10000 });
 }
 
-// Haversine formula to calculate distance in kilometers between two lat/lng points
+// Haversine distance formula in kilometers
 function calculateDistance(lat1, lon1, lat2, lon2) {
-  if (!lat1 || !lon1 || !lat2 || !lon2) return 99999; // Default large distance if missing
-  const R = 6371; // Radius of the earth in km
+  if (!lat1 || !lon1 || !lat2 || !lon2) return 99999;
+  const R = 6371;
   const dLat = deg2rad(lat2 - lat1);
   const dLon = deg2rad(lon2 - lon1);
   const a = 
     Math.sin(dLat/2) * Math.sin(dLat/2) +
     Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2)
-  ; 
+    Math.sin(dLon/2) * Math.sin(dLon/2); 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-  return R * c; // Distance in km
+  return R * c;
 }
 
 function deg2rad(deg) {
   return deg * (Math.PI/180);
 }
 
+// Image Upload Helper with NSFWJS Pre-Scan
 async function uploadImagesToSupabase(files, previewContainerId) {
   const previewContainer = document.getElementById(previewContainerId);
   if (!files || files.length === 0) return [];
-  previewContainer.innerHTML = 'Uploading photos...';
+  previewContainer.innerHTML = 'Analyzing and uploading photos...';
 
   let urls = [];
   const maxFiles = Math.min(files.length, 5);
 
   for (let i = 0; i < maxFiles; i++) {
     const file = files[i];
+
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(file);
+    await new Promise(resolve => img.onload = resolve);
+
+    const safe = await isImageSafe(img);
+    if (!safe) {
+      alert(`Photo "${file.name}" was flagged for explicit/suggestive content and cannot be uploaded.`);
+      continue;
+    }
+
     const fileExt = file.name.split('.').pop();
     const fileName = `${currentUser.id}_${Date.now()}_${i}.${fileExt}`;
-    const filePath = `${fileName}`;
 
     const { error: uploadError } = await supabaseClient.storage
       .from('profile-images')
-      .upload(filePath, file);
+      .upload(fileName, file);
 
     if (!uploadError) {
-      const { data } = supabaseClient.storage.from('profile-images').getPublicUrl(filePath);
+      const { data } = supabaseClient.storage.from('profile-images').getPublicUrl(fileName);
       if (data && data.publicUrl) {
         urls.push(data.publicUrl);
       }
@@ -511,10 +577,10 @@ async function uploadImagesToSupabase(files, previewContainerId) {
 
   previewContainer.innerHTML = '';
   urls.forEach(url => {
-    const img = document.createElement('img');
-    img.src = url;
-    img.className = 'card-photo-thumb';
-    previewContainer.appendChild(img);
+    const imgEl = document.createElement('img');
+    imgEl.src = url;
+    imgEl.className = 'card-photo-thumb';
+    previewContainer.appendChild(imgEl);
   });
 
   return urls;
@@ -596,7 +662,6 @@ async function loadDashboard() {
 
   deckContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding-top: 100px;">Finding nearby profiles...</p>';
 
-  // Fetch current user's location coordinates
   const { data: myProfile } = await supabaseClient
     .from('profiles')
     .select('latitude, longitude')
@@ -637,7 +702,7 @@ async function loadDashboard() {
 
   let filteredProfiles = profiles.filter(p => !excludedUserIds.has(p.id));
 
-  // Sort profiles by distance (nearest first) using Haversine formula
+  // Sort profiles by distance (nearest first)
   filteredProfiles.sort((a, b) => {
     const distA = calculateDistance(myLat, myLon, a.latitude, a.longitude);
     const distB = calculateDistance(myLat, myLon, b.latitude, b.longitude);
@@ -741,7 +806,10 @@ function renderDeck() {
           <div class="card-name">${escapeHTML(profile.full_name || 'Anonymous')}</div>
           <div class="card-location">📍 ${escapeHTML(profile.location_name || 'Location not specified')}</div>
         </div>
-        <div class="card-match-badge">${matchPercentage}% Match</div>
+        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+          <div class="card-match-badge">${matchPercentage}% Match</div>
+          <button type="button" class="report-trigger-btn" onclick="openReportModal('${profile.id}')" style="background: none; border: none; color: #d9534f; font-size: 0.75rem; cursor: pointer; padding: 0;">🚩 Report</button>
+        </div>
       </div>
       ${photosHTML}
       <div class="card-bio">
@@ -1120,7 +1188,10 @@ function openPartnerProfileModal(profile) {
         <div style="font-size: 1.2rem; font-weight: 700; color: var(--primary);">${escapeHTML(profile.full_name)}</div>
         <div style="font-size: 0.85rem; color: var(--text-muted);">📍 ${escapeHTML(profile.location_name)}</div>
       </div>
-      <div style="background: var(--primary-light); color: var(--primary); font-weight: 700; font-size: 0.8rem; padding: 4px 10px; border-radius: 12px;">Matched Partner</div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+        <div style="background: var(--primary-light); color: var(--primary); font-weight: 700; font-size: 0.8rem; padding: 4px 10px; border-radius: 12px;">Matched Partner</div>
+        <button type="button" onclick="openReportModal('${profile.id}')" style="background:none; border:none; color:#d9534f; font-size:0.75rem; cursor:pointer; padding:0;">🚩 Report User</button>
+      </div>
     </div>
     ${photosHTML}
     <div style="font-size: 0.95rem; color: var(--text-main); background: #fff; padding: 12px; border-radius: 8px; border-left: 3px solid var(--primary); margin-bottom: 10px;">
@@ -1170,7 +1241,10 @@ function openReviewModal(connection, profile) {
         <div style="font-size: 1.2rem; font-weight: 700; color: var(--primary);">${escapeHTML(profile.full_name)}</div>
         <div style="font-size: 0.85rem; color: var(--text-muted);">📍 ${escapeHTML(profile.location_name)}</div>
       </div>
-      <div style="background: var(--primary-light); color: var(--primary); font-weight: 700; font-size: 0.8rem; padding: 4px 10px; border-radius: 12px;">Incoming Like</div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+        <div style="background: var(--primary-light); color: var(--primary); font-weight: 700; font-size: 0.8rem; padding: 4px 10px; border-radius: 12px;">Incoming Like</div>
+        <button type="button" onclick="openReportModal('${profile.id}')" style="background:none; border:none; color:#d9534f; font-size:0.75rem; cursor:pointer; padding:0;">🚩 Report</button>
+      </div>
     </div>
     ${photosHTML}
     <div style="font-size: 0.95rem; color: var(--text-main); background: #fff; padding: 12px; border-radius: 8px; border-left: 3px solid var(--primary); margin-bottom: 10px;">
@@ -1183,6 +1257,12 @@ function openReviewModal(connection, profile) {
   `;
 
   reviewModal.classList.add('show');
+}
+
+function openReportModal(targetUserId) {
+  activeReportTargetId = targetUserId;
+  document.getElementById('report-details').value = '';
+  document.getElementById('report-modal').classList.add('show');
 }
 
 function attachSwipeEvents(card) {
@@ -1231,6 +1311,7 @@ function attachSwipeEvents(card) {
 async function deleteUserAccount() {
   await supabaseClient.from('user_answers').delete().eq('user_id', currentUser.id);
   await supabaseClient.from('connections').delete().or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
+  await supabaseClient.from('reports').delete().or(`reporter_id.eq.${currentUser.id},reported_user_id.eq.${currentUser.id}`);
   await supabaseClient.from('profiles').delete().eq('id', currentUser.id);
   await supabaseClient.auth.signOut();
   currentUser = null;
