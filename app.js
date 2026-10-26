@@ -11,9 +11,10 @@ let currentCardIndex = 0;
 let currentReviewConnection = null;
 let activeChatConnectionId = null;
 let activeChatPartner = null;
+let uploadedImageUrlsTemp = [];
 
 function showSection(sectionId) {
-  const sections = ['auth-section', 'profile-section', 'quiz-section', 'dashboard-section', 'chat-section'];
+  const sections = ['auth-section', 'profile-section', 'photos-prompt-section', 'quiz-section', 'dashboard-section', 'chat-section'];
   sections.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.remove('active');
@@ -72,6 +73,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Profile Save Listener
   const saveProfileBtn = document.getElementById('save-profile-btn');
   if (saveProfileBtn) {
     saveProfileBtn.addEventListener('click', async () => {
@@ -108,6 +110,35 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Photo Upload Handler for Onboarding
+  const photoInput = document.getElementById('photo-upload-input');
+  if (photoInput) {
+    photoInput.addEventListener('change', async (e) => {
+      uploadedImageUrlsTemp = await uploadImagesToSupabase(e.target.files, 'photo-preview-grid');
+    });
+  }
+
+  // Save Photos & Prompt Step
+  const savePhotosPromptBtn = document.getElementById('save-photos-prompt-btn');
+  if (savePhotosPromptBtn) {
+    savePhotosPromptBtn.addEventListener('click', async () => {
+      const promptQ = document.getElementById('setup-prompt-q').value;
+      const promptA = document.getElementById('setup-prompt-a').value.trim();
+
+      const { error } = await supabaseClient.from('profiles').update({
+        images: uploadedImageUrlsTemp,
+        prompt_question: promptQ,
+        prompt_answer: promptA
+      }).eq('id', currentUser.id);
+
+      if (error) {
+        alert('Error saving photos/prompt: ' + error.message);
+      } else {
+        await loadDashboard();
+      }
+    });
+  }
+
   const submitQuizBtn = document.getElementById('submit-quiz-btn');
   if (submitQuizBtn) {
     submitQuizBtn.addEventListener('click', async () => {
@@ -128,7 +159,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (error) {
         alert('Error saving answers: ' + error.message);
       } else {
-        await loadDashboard();
+        // After quiz, prompt user to add photos & prompt
+        showSection('photos-prompt-section');
       }
     });
   }
@@ -151,7 +183,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       discoverTab.classList.remove('active');
       viewDiscover.style.display = 'none';
       viewConnections.style.display = 'block';
-      // Hide unread indicator dot when viewing connections tab
       const unreadDot = document.getElementById('unread-dot');
       if (unreadDot) unreadDot.style.display = 'none';
       await loadConnectionsList();
@@ -177,6 +208,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const deleteAccountBtn = document.getElementById('menu-delete-account');
   const profileModal = document.getElementById('profile-modal');
   const closeModalBtn = document.getElementById('close-modal-btn');
+  const editProfileBtn = document.getElementById('edit-profile-btn');
 
   if (profilePreviewBtn) {
     profilePreviewBtn.addEventListener('click', async () => {
@@ -197,7 +229,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (deleteAccountBtn) {
     deleteAccountBtn.addEventListener('click', async () => {
       dropdownMenu.classList.remove('show');
-      if (confirm('Are you sure you want to delete your account? This will remove your profile and answers.')) {
+      if (confirm('Are you sure you want to delete your account?')) {
         await deleteUserAccount();
       }
     });
@@ -206,6 +238,86 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (closeModalBtn && profileModal) {
     closeModalBtn.addEventListener('click', () => {
       profileModal.classList.remove('show');
+    });
+  }
+
+  if (editProfileBtn) {
+    editProfileBtn.addEventListener('click', async () => {
+      profileModal.classList.remove('show');
+      await openEditProfileModal();
+    });
+  }
+
+  // Edit Profile Modal Listeners
+  const editProfileModal = document.getElementById('edit-profile-modal');
+  const closeEditModalBtn = document.getElementById('close-edit-modal-btn');
+  const saveEditedProfileBtn = document.getElementById('save-edited-profile-btn');
+  const editPhotoInput = document.getElementById('edit-photo-input');
+  let editPhotosTemp = [];
+
+  if (editPhotoInput) {
+    editPhotoInput.addEventListener('change', async (e) => {
+      editPhotosTemp = await uploadImagesToSupabase(e.target.files, 'edit-photo-preview');
+    });
+  }
+
+  if (closeEditModalBtn && editProfileModal) {
+    closeEditModalBtn.addEventListener('click', () => {
+      editProfileModal.classList.remove('show');
+    });
+  }
+
+  if (saveEditedProfileBtn) {
+    saveEditedProfileBtn.addEventListener('click', async () => {
+      const fullName = document.getElementById('edit-full-name').value.trim();
+      const location = document.getElementById('edit-location').value.trim();
+      const intent = document.getElementById('edit-intent').value;
+      const bio = document.getElementById('edit-bio').value.trim();
+      const promptQ = document.getElementById('edit-prompt-q').value;
+      const promptA = document.getElementById('edit-prompt-a').value.trim();
+
+      const { error } = await supabaseClient.from('profiles').update({
+        full_name: fullName,
+        location_name: location,
+        intent: intent,
+        bio: bio,
+        images: editPhotosTemp.length > 0 ? editPhotosTemp : undefined,
+        prompt_question: promptQ,
+        prompt_answer: promptA,
+        updated_at: new Date().toISOString()
+      }).eq('id', currentUser.id);
+
+      if (error) {
+        alert('Error updating profile: ' + error.message);
+      } else {
+        editProfileModal.classList.remove('show');
+        alert('Profile successfully updated!');
+        await loadDashboard();
+      }
+    });
+  }
+
+  // Bio Comment / Prompt Response Modal Listeners
+  const bioCommentModal = document.getElementById('bio-comment-modal');
+  const cancelCommentBtn = document.getElementById('cancel-comment-btn');
+  const sendCommentConnectBtn = document.getElementById('send-comment-connect-btn');
+
+  if (cancelCommentBtn && bioCommentModal) {
+    cancelCommentBtn.addEventListener('click', () => {
+      bioCommentModal.classList.remove('show');
+    });
+  }
+
+  if (sendCommentConnectBtn) {
+    sendCommentConnectBtn.addEventListener('click', async () => {
+      const commentText = document.getElementById('bio-comment-input').value.trim();
+      if (!commentText) {
+        alert('Please write a note or reaction.');
+        return;
+      }
+      const targetProfile = availableProfiles[currentCardIndex];
+      bioCommentModal.classList.remove('show');
+      await handleRightSwipeWithNote(targetProfile, commentText);
     });
   }
 
@@ -223,10 +335,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (reviewPassBtn) {
     reviewPassBtn.addEventListener('click', async () => {
       if (currentReviewConnection) {
-        await supabaseClient
-          .from('connections')
-          .update({ status: 'rejected', updated_at: new Date().toISOString() })
-          .eq('id', currentReviewConnection.id);
+        await supabaseClient.from('connections').update({ status: 'rejected', updated_at: new Date().toISOString() }).eq('id', currentReviewConnection.id);
         reviewModal.classList.remove('show');
         await loadConnectionsList();
       }
@@ -236,10 +345,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (reviewConnectBtn) {
     reviewConnectBtn.addEventListener('click', async () => {
       if (currentReviewConnection) {
-        await supabaseClient
-          .from('connections')
-          .update({ status: 'accepted', updated_at: new Date().toISOString() })
-          .eq('id', currentReviewConnection.id);
+        await supabaseClient.from('connections').update({ status: 'accepted', updated_at: new Date().toISOString() }).eq('id', currentReviewConnection.id);
         reviewModal.classList.remove('show');
         alert(`🎉 It's a Match! Your active chat space is now open.`);
         await updateActiveChatCount();
@@ -260,13 +366,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   const chatMessageInput = document.getElementById('chat-message-input');
 
   if (sendMessageBtn && chatMessageInput) {
-    sendMessageBtn.addEventListener('click', async () => {
-      await sendChatMessage();
-    });
+    sendMessageBtn.addEventListener('click', async () => { await sendChatMessage(); });
     chatMessageInput.addEventListener('keypress', async (e) => {
-      if (e.key === 'Enter') {
-        await sendChatMessage();
-      }
+      if (e.key === 'Enter') { await sendChatMessage(); }
     });
   }
 
@@ -277,23 +379,17 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   if (chatHeaderProfileTrigger) {
     chatHeaderProfileTrigger.addEventListener('click', () => {
-      if (activeChatPartner) {
-        openPartnerProfileModal(activeChatPartner);
-      }
+      if (activeChatPartner) { openPartnerProfileModal(activeChatPartner); }
     });
   }
 
   if (closePartnerModalBtn && partnerProfileModal) {
-    closePartnerModalBtn.addEventListener('click', () => {
-      partnerProfileModal.classList.remove('show');
-    });
+    closePartnerModalBtn.addEventListener('click', () => { partnerProfileModal.classList.remove('show'); });
   }
 
   if (unmatchBtn) {
     unmatchBtn.addEventListener('click', async () => {
-      if (confirm('Are you sure you want to unmatch? This will remove the connection and chat history.')) {
-        await unmatchCurrentConnection();
-      }
+      if (confirm('Are you sure you want to unmatch?')) { await unmatchCurrentConnection(); }
     });
   }
 
@@ -303,6 +399,44 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (passBtn) passBtn.addEventListener('click', () => swipeCurrentCard('left'));
   if (connectBtn) connectBtn.addEventListener('click', () => swipeCurrentCard('right'));
 });
+
+// Image Upload Helper to Supabase Storage
+async function uploadImagesToSupabase(files, previewContainerId) {
+  const previewContainer = document.getElementById(previewContainerId);
+  if (!files || files.length === 0) return [];
+  previewContainer.innerHTML = 'Uploading photos...';
+
+  let urls = [];
+  const maxFiles = Math.min(files.length, 5);
+
+  for (let i = 0; i < maxFiles; i++) {
+    const file = files[i];
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${currentUser.id}_${Date.now()}_${i}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabaseClient.storage
+      .from('profile-images')
+      .upload(filePath, file);
+
+    if (!uploadError) {
+      const { data } = supabaseClient.storage.from('profile-images').getPublicUrl(filePath);
+      if (data && data.publicUrl) {
+        urls.push(data.publicUrl);
+      }
+    }
+  }
+
+  previewContainer.innerHTML = '';
+  urls.forEach(url => {
+    const img = document.createElement('img');
+    img.src = url;
+    img.className = 'card-photo-thumb';
+    previewContainer.appendChild(img);
+  });
+
+  return urls;
+}
 
 supabaseClient.auth.onAuthStateChange(async (event, session) => {
   if (session && session.user) {
@@ -317,7 +451,12 @@ async function checkProfileStatus() {
   if (profile) {
     const { data: answers } = await supabaseClient.from('user_answers').select('question_id').eq('user_id', currentUser.id);
     if (answers && answers.length > 0) {
-      await loadDashboard();
+      // Check if photos/prompt are filled
+      if (!profile.images || profile.images.length === 0) {
+        showSection('photos-prompt-section');
+      } else {
+        await loadDashboard();
+      }
     } else {
       await loadQuestionnaire();
     }
@@ -368,7 +507,6 @@ async function loadQuestionnaire() {
   });
 }
 
-// DASHBOARD & SWIPE DECK LOGIC
 async function loadDashboard() {
   showSection('dashboard-section');
   const deckContainer = document.getElementById('deck-container');
@@ -389,21 +527,16 @@ async function loadDashboard() {
   if (existingConnections) {
     existingConnections.forEach(c => {
       const otherId = c.requester_id === currentUser.id ? c.receiver_id : c.requester_id;
-
       if (c.status === 'accepted' || c.status === 'pending') {
         excludedUserIds.add(otherId);
       } else if (c.status === 'rejected' && c.requester_id === currentUser.id) {
         const createdAt = new Date(c.created_at);
-        if (createdAt > thirtyDaysAgo) {
-          excludedUserIds.add(otherId);
-        }
+        if (createdAt > thirtyDaysAgo) { excludedUserIds.add(otherId); }
       }
     });
   }
 
-  const { data: profiles, error } = await supabaseClient
-    .from('profiles')
-    .select('*');
+  const { data: profiles, error } = await supabaseClient.from('profiles').select('*');
 
   if (error || !profiles) {
     deckContainer.innerHTML = '<p style="text-align: center; color: var(--accent);">Error loading profiles.</p>';
@@ -427,13 +560,10 @@ async function updateActiveChatCount() {
 
   const count = activeMatches ? activeMatches.length : 0;
   const countBadge = document.getElementById('active-chat-count');
-  if (countBadge) {
-    countBadge.innerHTML = `${count} / 3`;
-  }
+  if (countBadge) { countBadge.innerHTML = `${count} / 3`; }
 }
 
 async function checkForUnreadMessages() {
-  // Check if there are incoming messages from others that are newer than last check, or simply show unread dot if last message sender is not current user
   const { data: connections } = await supabaseClient
     .from('connections')
     .select('id')
@@ -441,7 +571,6 @@ async function checkForUnreadMessages() {
     .or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
 
   if (!connections || connections.length === 0) return;
-
   const connectionIds = connections.map(c => c.id);
 
   const { data: latestMsgs } = await supabaseClient
@@ -451,7 +580,6 @@ async function checkForUnreadMessages() {
     .order('created_at', { ascending: false });
 
   if (latestMsgs && latestMsgs.length > 0) {
-    // If the very latest message across active chats was sent by someone else, show unread dot
     const mostRecent = latestMsgs[0];
     if (mostRecent.sender_id !== currentUser.id) {
       const unreadDot = document.getElementById('unread-dot');
@@ -486,6 +614,25 @@ function renderDeck() {
   const matchPercentage = Math.floor(Math.random() * 15) + 82;
   const intentText = profile.intent ? profile.intent.charAt(0).toUpperCase() + profile.intent.slice(1) : 'Both';
 
+  let photosHTML = '';
+  if (profile.images && profile.images.length > 0) {
+    photosHTML = `<div class="card-photos-grid">`;
+    profile.images.forEach(url => {
+      photosHTML += `<img src="${url}" class="card-photo-thumb" />`;
+    });
+    photosHTML += `</div>`;
+  }
+
+  let promptHTML = '';
+  if (profile.prompt_question && profile.prompt_answer) {
+    promptHTML = `
+      <div class="card-prompt-box">
+        <div class="card-prompt-q">💬 ${escapeHTML(profile.prompt_question)}</div>
+        <div class="card-prompt-a">"${escapeHTML(profile.prompt_answer)}"</div>
+      </div>
+    `;
+  }
+
   card.innerHTML = `
     <div>
       <div class="card-header">
@@ -495,17 +642,83 @@ function renderDeck() {
         </div>
         <div class="card-match-badge">${matchPercentage}% Match</div>
       </div>
+      ${photosHTML}
       <div class="card-bio">
         "${escapeHTML(profile.bio || 'Living mindfully and seeking genuine connections.')}"
       </div>
+      ${promptHTML}
+      <button type="button" class="comment-bio-btn" id="open-comment-modal-btn">💬 Comment on Bio / Answer Prompt</button>
     </div>
-    <div class="card-intent">
+    <div class="card-intent" style="margin-top: 10px;">
       🌱 Intent: <strong>${escapeHTML(intentText)}</strong>
     </div>
   `;
 
   deckContainer.appendChild(card);
+
+  // Attach comment trigger
+  const commentBtn = card.querySelector('#open-comment-modal-btn');
+  if (commentBtn) {
+    commentBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openCommentModal(profile);
+    });
+  }
+
   attachSwipeEvents(card);
+}
+
+function openCommentModal(profile) {
+  const modal = document.getElementById('bio-comment-modal');
+  const bioBox = document.getElementById('comment-target-bio');
+  document.getElementById('bio-comment-input').value = '';
+
+  bioBox.innerHTML = `<strong>${escapeHTML(profile.full_name)}'s Reflection:</strong><br/>"${escapeHTML(profile.bio || profile.prompt_answer || 'No bio provided.')}"`;
+  modal.classList.add('show');
+}
+
+async function handleRightSwipeWithNote(targetProfile, noteText) {
+  const { data: incomingRequest } = await supabaseClient
+    .from('connections')
+    .select('*')
+    .eq('requester_id', targetProfile.id)
+    .eq('receiver_id', currentUser.id)
+    .single();
+
+  if (incomingRequest) {
+    const { error } = await supabaseClient
+      .from('connections')
+      .update({ status: 'accepted', updated_at: new Date().toISOString() })
+      .eq('id', incomingRequest.id);
+
+    if (!error) {
+      // Send the note as the first message
+      await supabaseClient.from('messages').insert([
+        { connection_id: incomingRequest.id, sender_id: currentUser.id, message_text: `Note: ${noteText}` }
+      ]);
+      alert(`🎉 It's a Match! Your note was sent and your chat is now open.`);
+      await updateActiveChatCount();
+    }
+  } else {
+    // Create new connection and send message if accepted, or insert connection as pending with message
+    const { data: newConn, error } = await supabaseClient
+      .from('connections')
+      .upsert([
+        { requester_id: currentUser.id, receiver_id: targetProfile.id, status: 'pending' }
+      ], { onConflict: 'requester_id,receiver_id' })
+      .select()
+      .single();
+
+    if (newConn && !error) {
+      await supabaseClient.from('messages').insert([
+        { connection_id: newConn.id, sender_id: currentUser.id, message_text: `Note: ${noteText}` }
+      ]);
+    }
+    alert('Your note and connection request have been sent!');
+  }
+
+  currentCardIndex++;
+  renderDeck();
 }
 
 async function swipeCurrentCard(direction) {
@@ -567,7 +780,6 @@ async function handleLeftSwipe(targetProfile) {
     ], { onConflict: 'requester_id,receiver_id' });
 }
 
-// CONNECTIONS & MATCHES LIST RENDERER WITH LAST MESSAGE PREVIEW & SORTING
 async function loadConnectionsList() {
   const acceptedContainer = document.getElementById('accepted-matches-container');
   const pendingContainer = document.getElementById('pending-matches-container');
@@ -592,7 +804,6 @@ async function loadConnectionsList() {
   if (accepted.length === 0) {
     acceptedContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.88rem;">No active matches yet. Keep exploring!</p>';
   } else {
-    // Fetch last message for each accepted match to enable sorting and preview text
     const acceptedWithMessages = await Promise.all(accepted.map(async (c) => {
       const { data: msgs } = await supabaseClient
         .from('messages')
@@ -609,7 +820,6 @@ async function loadConnectionsList() {
       };
     }));
 
-    // Sort active matches by most recent message or update time
     acceptedWithMessages.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
 
     acceptedContainer.innerHTML = '';
@@ -627,9 +837,7 @@ async function loadConnectionsList() {
         </div>
         <span class="status-tag accepted">Chat 💬</span>
       `;
-      item.addEventListener('click', () => {
-        openChat(c.id, otherUser);
-      });
+      item.addEventListener('click', () => { openChat(c.id, otherUser); });
       acceptedContainer.appendChild(item);
     });
   }
@@ -654,9 +862,7 @@ async function loadConnectionsList() {
       `;
 
       if (!isSentByMe) {
-        item.addEventListener('click', () => {
-          openReviewModal(c, otherUser);
-        });
+        item.addEventListener('click', () => { openReviewModal(c, otherUser); });
       }
 
       pendingContainer.appendChild(item);
@@ -664,7 +870,6 @@ async function loadConnectionsList() {
   }
 }
 
-// CHAT FUNCTIONS
 async function openChat(connectionId, partnerProfile) {
   activeChatConnectionId = connectionId;
   activeChatPartner = partnerProfile;
@@ -727,7 +932,6 @@ async function sendChatMessage() {
   if (error) {
     alert('Error sending message: ' + error.message);
   } else {
-    // Also update connection's updated_at timestamp so sorting updates instantly
     await supabaseClient
       .from('connections')
       .update({ updated_at: new Date().toISOString() })
@@ -737,10 +941,77 @@ async function sendChatMessage() {
   }
 }
 
+async function showProfilePreview() {
+  const modal = document.getElementById('profile-modal');
+  const detailsEl = document.getElementById('modal-profile-details');
+  detailsEl.innerHTML = 'Loading your profile...';
+  modal.classList.add('show');
+
+  const { data: profile } = await supabaseClient
+    .from('profiles')
+    .select('*')
+    .eq('id', currentUser.id)
+    .single();
+
+  if (profile) {
+    const intentText = profile.intent ? profile.intent.charAt(0).toUpperCase() + profile.intent.slice(1) : 'Both';
+    let photosHTML = '';
+    if (profile.images && profile.images.length > 0) {
+      photosHTML = `<div style="display:flex; gap:6px; margin: 10px 0; overflow-x:auto;">`;
+      profile.images.forEach(u => { photosHTML += `<img src="${u}" style="width:60px; height:60px; object-fit:cover; border-radius:6px;" />`; });
+      photosHTML += `</div>`;
+    }
+
+    detailsEl.innerHTML = `
+      <p style="margin-bottom: 6px;"><strong>Name:</strong> ${escapeHTML(profile.full_name)}</p>
+      <p style="margin-bottom: 6px;"><strong>Location:</strong> ${escapeHTML(profile.location_name)}</p>
+      <p style="margin-bottom: 6px;"><strong>Intent:</strong> ${escapeHTML(intentText)}</p>
+      ${photosHTML}
+      <p style="margin-top: 8px;"><strong>Bio:</strong><br/>"${escapeHTML(profile.bio || '')}"</p>
+      ${profile.prompt_question ? `<p style="margin-top: 8px;"><strong>${escapeHTML(profile.prompt_question)}</strong><br/>"${escapeHTML(profile.prompt_answer || '')}"</p>` : ''}
+    `;
+  } else {
+    detailsEl.innerHTML = 'Profile not found.';
+  }
+}
+
+async function openEditProfileModal() {
+  const modal = document.getElementById('edit-profile-modal');
+  const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
+  if (!profile) return;
+
+  document.getElementById('edit-full-name').value = profile.full_name || '';
+  document.getElementById('edit-location').value = profile.location_name || '';
+  document.getElementById('edit-intent').value = profile.intent || 'both';
+  document.getElementById('edit-bio').value = profile.bio || '';
+  document.getElementById('edit-prompt-q').value = profile.prompt_question || 'A simple joy that always grounds me is...';
+  document.getElementById('edit-prompt-a').value = profile.prompt_answer || '';
+
+  const preview = document.getElementById('edit-photo-preview');
+  preview.innerHTML = '';
+  if (profile.images && profile.images.length > 0) {
+    profile.images.forEach(u => {
+      const img = document.createElement('img');
+      img.src = u;
+      img.className = 'card-photo-thumb';
+      preview.appendChild(img);
+    });
+  }
+
+  modal.classList.add('show');
+}
+
 function openPartnerProfileModal(profile) {
   const modal = document.getElementById('partner-profile-modal');
   const bodyEl = document.getElementById('partner-profile-body');
   const intentText = profile.intent ? profile.intent.charAt(0).toUpperCase() + profile.intent.slice(1) : 'Both';
+
+  let photosHTML = '';
+  if (profile.images && profile.images.length > 0) {
+    photosHTML = `<div style="display:flex; gap:6px; margin: 10px 0; overflow-x:auto;">`;
+    profile.images.forEach(u => { photosHTML += `<img src="${u}" style="width:60px; height:60px; object-fit:cover; border-radius:6px;" />`; });
+    photosHTML += `</div>`;
+  }
 
   bodyEl.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
@@ -750,9 +1021,11 @@ function openPartnerProfileModal(profile) {
       </div>
       <div style="background: var(--primary-light); color: var(--primary); font-weight: 700; font-size: 0.8rem; padding: 4px 10px; border-radius: 12px;">Matched Partner</div>
     </div>
+    ${photosHTML}
     <div style="font-size: 0.95rem; color: var(--text-main); background: #fff; padding: 12px; border-radius: 8px; border-left: 3px solid var(--primary); margin-bottom: 10px;">
       "${escapeHTML(profile.bio || 'No bio provided.')}"
     </div>
+    ${profile.prompt_question ? `<div style="background:var(--primary-light); padding:10px; border-radius:6px; font-size:0.85rem; margin-bottom:10px;"><strong>${escapeHTML(profile.prompt_question)}</strong><br/>"${escapeHTML(profile.prompt_answer || '')}"</div>` : ''}
     <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: capitalize;">
       🌱 Intent: <strong>${escapeHTML(intentText)}</strong>
     </div>
@@ -764,10 +1037,7 @@ function openPartnerProfileModal(profile) {
 async function unmatchCurrentConnection() {
   if (!activeChatConnectionId) return;
 
-  const { error } = await supabaseClient
-    .from('connections')
-    .delete()
-    .eq('id', activeChatConnectionId);
+  const { error } = await supabaseClient.from('connections').delete().eq('id', activeChatConnectionId);
 
   if (error) {
     alert('Error unmatching: ' + error.message);
@@ -784,8 +1054,14 @@ function openReviewModal(connection, profile) {
   currentReviewConnection = connection;
   const reviewModal = document.getElementById('review-modal');
   const bodyEl = document.getElementById('review-profile-body');
-
   const intentText = profile.intent ? profile.intent.charAt(0).toUpperCase() + profile.intent.slice(1) : 'Both';
+
+  let photosHTML = '';
+  if (profile.images && profile.images.length > 0) {
+    photosHTML = `<div style="display:flex; gap:6px; margin: 10px 0; overflow-x:auto;">`;
+    profile.images.forEach(u => { photosHTML += `<img src="${u}" style="width:60px; height:60px; object-fit:cover; border-radius:6px;" />`; });
+    photosHTML += `</div>`;
+  }
 
   bodyEl.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
@@ -795,9 +1071,11 @@ function openReviewModal(connection, profile) {
       </div>
       <div style="background: var(--primary-light); color: var(--primary); font-weight: 700; font-size: 0.8rem; padding: 4px 10px; border-radius: 12px;">Incoming Like</div>
     </div>
+    ${photosHTML}
     <div style="font-size: 0.95rem; color: var(--text-main); background: #fff; padding: 12px; border-radius: 8px; border-left: 3px solid var(--primary); margin-bottom: 10px;">
       "${escapeHTML(profile.bio || 'No bio provided.')}"
     </div>
+    ${profile.prompt_question ? `<div style="background:var(--primary-light); padding:10px; border-radius:6px; font-size:0.85rem; margin-bottom:10px;"><strong>${escapeHTML(profile.prompt_question)}</strong><br/>"${escapeHTML(profile.prompt_answer || '')}"</div>` : ''}
     <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: capitalize;">
       🌱 Intent: <strong>${escapeHTML(intentText)}</strong>
     </div>
@@ -844,35 +1122,9 @@ function attachSwipeEvents(card) {
   card.addEventListener('mousemove', onMove);
   card.addEventListener('mouseup', onEnd);
   card.addEventListener('mouseleave', onEnd);
-
   card.addEventListener('touchstart', onStart, { passive: true });
   card.addEventListener('touchmove', onMove, { passive: true });
   card.addEventListener('touchend', onEnd);
-}
-
-async function showProfilePreview() {
-  const modal = document.getElementById('profile-modal');
-  const detailsEl = document.getElementById('modal-profile-details');
-  detailsEl.innerHTML = 'Loading your profile...';
-  modal.classList.add('show');
-
-  const { data: profile } = await supabaseClient
-    .from('profiles')
-    .select('*')
-    .eq('id', currentUser.id)
-    .single();
-
-  if (profile) {
-    const intentText = profile.intent ? profile.intent.charAt(0).toUpperCase() + profile.intent.slice(1) : 'Both';
-    detailsEl.innerHTML = `
-      <p style="margin-bottom: 8px;"><strong>Name:</strong> ${escapeHTML(profile.full_name)}</p>
-      <p style="margin-bottom: 8px;"><strong>Location:</strong> ${escapeHTML(profile.location_name)}</p>
-      <p style="margin-bottom: 8px;"><strong>Intent:</strong> ${escapeHTML(intentText)}</p>
-      <p style="margin-top: 10px;"><strong>Bio:</strong><br/>"${escapeHTML(profile.bio)}"</p>
-    `;
-  } else {
-    detailsEl.innerHTML = 'Profile not found.';
-  }
 }
 
 async function deleteUserAccount() {
