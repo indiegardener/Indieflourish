@@ -39,7 +39,6 @@ body {
   min-height: 85vh;
 }
 
-/* Top Header Bar */
 .app-header {
   display: flex;
   justify-content: space-between;
@@ -109,7 +108,7 @@ body {
   flex-grow: 1;
 }
 
-/* Nav Tabs */
+/* Nav Tabs & Unread Notification Dot */
 .nav-tabs {
   display: flex;
   border-bottom: 1px solid var(--border);
@@ -127,12 +126,24 @@ body {
   font-weight: 600;
   cursor: pointer;
   border-radius: 0;
+  position: relative;
 }
 
 .tab-btn.active {
   color: var(--primary);
   border-bottom: 2px solid var(--primary);
   background: none;
+}
+
+.unread-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: var(--accent);
+  border-radius: 50%;
+  position: absolute;
+  top: 8px;
+  right: 28%;
 }
 
 .dashboard-view { display: none; }
