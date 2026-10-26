@@ -13,14 +13,12 @@
   <meta name="apple-mobile-web-app-title" content="Indieflourish" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
 
-  <!-- External Stylesheet & Supabase SDK -->
-  <link rel="stylesheet" href="style.css?v=14" />
+  <link rel="stylesheet" href="style.css?v=15" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
 <div id="app-container">
-  <!-- Top Navigation Header -->
   <header class="app-header">
     <h1 class="brand-title">Indieflourish</h1>
     <div class="menu-container" id="header-menu-container" style="display: none;">
@@ -58,8 +56,9 @@
       <input type="text" id="full-name" placeholder="e.g. Alex" required />
     </div>
     <div class="form-group">
-      <label for="location">Location</label>
+      <label for="location">Location / City</label>
       <input type="text" id="location" placeholder="e.g. Samastipur, Bihar" required />
+      <button type="button" id="detect-location-btn" style="background: none; border: none; color: var(--primary); font-size: 0.82rem; font-weight: 600; cursor: pointer; margin-top: 6px; padding: 0;">📍 Detect My Location Automatically</button>
     </div>
     <div class="form-group">
       <label for="intent">Connection Intent</label>
@@ -76,7 +75,7 @@
     <button type="button" id="save-profile-btn">Save Profile & Begin Quiz</button>
   </div>
 
-  <!-- SECTION 2.5: PHOTOS & PROMPT SETUP (New users see this right after quiz) -->
+  <!-- SECTION 2.5: PHOTOS & PROMPT SETUP -->
   <div id="photos-prompt-section" class="section">
     <h2>Add Photos & Prompt</h2>
     <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
@@ -170,7 +169,7 @@
   </div>
 </div>
 
-<!-- Profile Preview Modal (with Edit Option) -->
+<!-- Profile Preview Modal -->
 <div id="profile-modal" class="modal">
   <div class="modal-content" style="max-height: 85vh; overflow-y: auto;">
     <h3 style="color: var(--primary); margin-bottom: 12px;">Your Profile Preview</h3>
@@ -195,6 +194,7 @@
     <div class="form-group">
       <label>Location</label>
       <input type="text" id="edit-location" />
+      <button type="button" id="edit-detect-location-btn" style="background: none; border: none; color: var(--primary); font-size: 0.82rem; font-weight: 600; cursor: pointer; margin-top: 6px; padding: 0;">📍 Update GPS Coordinates</button>
     </div>
     <div class="form-group">
       <label>Intent</label>
@@ -233,7 +233,7 @@
   </div>
 </div>
 
-<!-- Comment on Bio / Answer Prompt Modal (Triggers Right Swipe) -->
+<!-- Bio Comment Modal -->
 <div id="bio-comment-modal" class="modal">
   <div class="modal-content" style="max-width: 440px;">
     <h3 style="color: var(--primary); margin-bottom: 4px;">Connect with a Thoughtful Note</h3>
@@ -279,7 +279,7 @@
   </div>
 </div>
 
-<script src="app.js?v=14"></script>
+<script src="app.js?v=15"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
