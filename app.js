@@ -9,9 +9,11 @@ let userAnswersMap = {};
 let availableProfiles = [];
 let currentCardIndex = 0;
 let currentReviewConnection = null;
+let activeChatConnectionId = null;
+let activeChatPartner = null;
 
 function showSection(sectionId) {
-  const sections = ['auth-section', 'profile-section', 'quiz-section', 'dashboard-section'];
+  const sections = ['auth-section', 'profile-section', 'quiz-section', 'dashboard-section', 'chat-section'];
   sections.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.remove('active');
@@ -26,7 +28,6 @@ function showSection(sectionId) {
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
-  // 1. Check Magic Link Tokens
   const hash = window.location.hash;
   if (hash && (hash.includes('access_token') || hash.includes('type=signup') || hash.includes('type=magiclink'))) {
     const { data } = await supabaseClient.auth.getSessionFromUrl({ url: window.location.href });
@@ -38,14 +39,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // 2. Standard Session Check
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (session && session.user) {
     currentUser = session.user;
     await checkProfileStatus();
   }
 
-  // 3. Auth Button Listener
   const sendBtn = document.getElementById('send-magic-link-btn');
   if (sendBtn) {
     sendBtn.addEventListener('click', async () => {
@@ -73,7 +72,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // 4. Robust Profile Save Listener
   const saveProfileBtn = document.getElementById('save-profile-btn');
   if (saveProfileBtn) {
     saveProfileBtn.addEventListener('click', async () => {
@@ -110,7 +108,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // 5. Quiz Submit Listener
   const submitQuizBtn = document.getElementById('submit-quiz-btn');
   if (submitQuizBtn) {
     submitQuizBtn.addEventListener('click', async () => {
@@ -136,7 +133,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // 6. Navigation Tabs
   const discoverTab = document.getElementById('tab-discover-btn');
   const connectionsTab = document.getElementById('tab-connections-btn');
   const viewDiscover = document.getElementById('view-discover');
@@ -159,7 +155,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // 7. Hamburger Menu & Actions
   const menuToggleBtn = document.getElementById('menu-toggle-btn');
   const dropdownMenu = document.getElementById('dropdown-menu');
 
@@ -211,7 +206,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Review Modal Action Listeners
   const reviewModal = document.getElementById('review-modal');
   const closeReviewModalBtn = document.getElementById('close-review-modal-btn');
   const reviewPassBtn = document.getElementById('review-pass-btn');
@@ -251,7 +245,56 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // 8. Swipe Button Listeners
+  // Chat Navigation & Messaging Listeners
+  const backToConnectionsBtn = document.getElementById('back-to-connections-btn');
+  if (backToConnectionsBtn) {
+    backToConnectionsBtn.addEventListener('click', () => {
+      showSection('dashboard-section');
+    });
+  }
+
+  const sendMessageBtn = document.getElementById('send-message-btn');
+  const chatMessageInput = document.getElementById('chat-message-input');
+
+  if (sendMessageBtn && chatMessageInput) {
+    sendMessageBtn.addEventListener('click', async () => {
+      await sendChatMessage();
+    });
+    chatMessageInput.addEventListener('keypress', async (e) => {
+      if (e.key === 'Enter') {
+        await sendChatMessage();
+      }
+    });
+  }
+
+  // Chat Partner Profile / Unmatch Trigger
+  const chatHeaderProfileTrigger = document.getElementById('chat-header-profile-trigger');
+  const partnerProfileModal = document.getElementById('partner-profile-modal');
+  const closePartnerModalBtn = document.getElementById('close-partner-modal-btn');
+  const unmatchBtn = document.getElementById('unmatch-btn');
+
+  if (chatHeaderProfileTrigger) {
+    chatHeaderProfileTrigger.addEventListener('click', () => {
+      if (activeChatPartner) {
+        openPartnerProfileModal(activeChatPartner);
+      }
+    });
+  }
+
+  if (closePartnerModalBtn && partnerProfileModal) {
+    closePartnerModalBtn.addEventListener('click', () => {
+      partnerProfileModal.classList.remove('show');
+    });
+  }
+
+  if (unmatchBtn) {
+    unmatchBtn.addEventListener('click', async () => {
+      if (confirm('Are you sure you want to unmatch? This will remove the connection and chat history.')) {
+        await unmatchCurrentConnection();
+      }
+    });
+  }
+
   const passBtn = document.getElementById('pass-btn');
   const connectBtn = document.getElementById('connect-btn');
 
@@ -408,6 +451,7 @@ function renderDeck() {
   card.id = 'active-swipe-card';
 
   const matchPercentage = Math.floor(Math.random() * 15) + 82;
+  const intentText = profile.intent ? profile.intent.charAt(0).toUpperCase() + profile.intent.slice(1) : 'Both';
 
   card.innerHTML = `
     <div>
@@ -423,7 +467,7 @@ function renderDeck() {
       </div>
     </div>
     <div class="card-intent">
-      🌱 Intent: <strong>${escapeHTML(profile.intent || 'Both')}</strong>
+      🌱 Intent: <strong>${escapeHTML(intentText)}</strong>
     </div>
   `;
 
@@ -490,7 +534,7 @@ async function handleLeftSwipe(targetProfile) {
     ], { onConflict: 'requester_id,receiver_id' });
 }
 
-// CONNECTIONS & MATCHES LIST RENDERER WITH INTERACTIVE INCOMING REVIEWS
+// CONNECTIONS & MATCHES LIST RENDERER
 async function loadConnectionsList() {
   const acceptedContainer = document.getElementById('accepted-matches-container');
   const pendingContainer = document.getElementById('pending-matches-container');
@@ -512,7 +556,6 @@ async function loadConnectionsList() {
   const accepted = connections.filter(c => c.status === 'accepted');
   const pending = connections.filter(c => c.status === 'pending');
 
-  // Render Accepted Matches
   if (accepted.length === 0) {
     acceptedContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.88rem;">No active matches yet. Keep exploring!</p>';
   } else {
@@ -525,15 +568,18 @@ async function loadConnectionsList() {
       item.innerHTML = `
         <div class="connection-info">
           <h4>${escapeHTML(otherUser.full_name)}</h4>
-          <p>📍 ${escapeHTML(otherUser.location_name)}</p>
+          <p>📍 ${escapeHTML(otherUser.location_name)} (Tap to chat)</p>
         </div>
-        <span class="status-tag accepted">Matched</span>
+        <span class="status-tag accepted">Chat 💬</span>
       `;
+      // Clicking accepted match opens chat
+      item.addEventListener('click', () => {
+        openChat(c.id, otherUser);
+      });
       acceptedContainer.appendChild(item);
     });
   }
 
-  // Render Pending Requests
   if (pending.length === 0) {
     pendingContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.88rem;">No pending connection requests.</p>';
   } else {
@@ -553,7 +599,6 @@ async function loadConnectionsList() {
         <span class="status-tag pending">${isSentByMe ? 'Pending' : 'Incoming 💌'}</span>
       `;
 
-      // If it's an incoming request, make it clickable to review
       if (!isSentByMe) {
         item.addEventListener('click', () => {
           openReviewModal(c, otherUser);
@@ -565,10 +610,122 @@ async function loadConnectionsList() {
   }
 }
 
+// CHAT FUNCTIONS
+async function openChat(connectionId, partnerProfile) {
+  activeChatConnectionId = connectionId;
+  activeChatPartner = partnerProfile;
+
+  const nameEl = document.getElementById('chat-partner-name');
+  if (nameEl) nameEl.textContent = partnerProfile.full_name;
+
+  showSection('chat-section');
+  await loadChatMessages();
+}
+
+async function loadChatMessages() {
+  const container = document.getElementById('chat-messages-container');
+  if (!container) return;
+
+  container.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">Loading messages...</p>';
+
+  const { data: messages, error } = await supabaseClient
+    .from('messages')
+    .select('*')
+    .eq('connection_id', activeChatConnectionId)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    container.innerHTML = '<p style="text-align: center; color: var(--accent); font-size: 0.85rem;">Error loading messages.</p>';
+    return;
+  }
+
+  container.innerHTML = '';
+  if (!messages || messages.length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 0.85rem; margin-top: 20px;">No messages yet. Say hello and start a mindful conversation!</p>';
+    return;
+  }
+
+  messages.forEach(msg => {
+    const bubble = document.createElement('div');
+    const isMe = msg.sender_id === currentUser.id;
+    bubble.className = `message-bubble ${isMe ? 'sent' : 'received'}`;
+    bubble.textContent = msg.message_text;
+    container.appendChild(bubble);
+  });
+
+  container.scrollTop = container.scrollHeight;
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById('chat-message-input');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text || !activeChatConnectionId) return;
+
+  input.value = '';
+
+  const { error } = await supabaseClient
+    .from('messages')
+    .insert([
+      { connection_id: activeChatConnectionId, sender_id: currentUser.id, message_text: text }
+    ]);
+
+  if (error) {
+    alert('Error sending message: ' + error.message);
+  } else {
+    await loadChatMessages();
+  }
+}
+
+function openPartnerProfileModal(profile) {
+  const modal = document.getElementById('partner-profile-modal');
+  const bodyEl = document.getElementById('partner-profile-body');
+  const intentText = profile.intent ? profile.intent.charAt(0).toUpperCase() + profile.intent.slice(1) : 'Both';
+
+  bodyEl.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+      <div>
+        <div style="font-size: 1.2rem; font-weight: 700; color: var(--primary);">${escapeHTML(profile.full_name)}</div>
+        <div style="font-size: 0.85rem; color: var(--text-muted);">📍 ${escapeHTML(profile.location_name)}</div>
+      </div>
+      <div style="background: var(--primary-light); color: var(--primary); font-weight: 700; font-size: 0.8rem; padding: 4px 10px; border-radius: 12px;">Matched Partner</div>
+    </div>
+    <div style="font-size: 0.95rem; color: var(--text-main); background: #fff; padding: 12px; border-radius: 8px; border-left: 3px solid var(--primary); margin-bottom: 10px;">
+      "${escapeHTML(profile.bio || 'No bio provided.')}"
+    </div>
+    <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: capitalize;">
+      🌱 Intent: <strong>${escapeHTML(intentText)}</strong>
+    </div>
+  `;
+
+  modal.classList.add('show');
+}
+
+async function unmatchCurrentConnection() {
+  if (!activeChatConnectionId) return;
+
+  const { error } = await supabaseClient
+    .from('connections')
+    .delete()
+    .eq('id', activeChatConnectionId);
+
+  if (error) {
+    alert('Error unmatching: ' + error.message);
+  } else {
+    document.getElementById('partner-profile-modal').classList.remove('show');
+    alert('Successfully unmatched.');
+    showSection('dashboard-section');
+    await loadConnectionsList();
+    await updateActiveChatCount();
+  }
+}
+
 function openReviewModal(connection, profile) {
   currentReviewConnection = connection;
   const reviewModal = document.getElementById('review-modal');
   const bodyEl = document.getElementById('review-profile-body');
+
+  const intentText = profile.intent ? profile.intent.charAt(0).toUpperCase() + profile.intent.slice(1) : 'Both';
 
   bodyEl.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
@@ -582,7 +739,7 @@ function openReviewModal(connection, profile) {
       "${escapeHTML(profile.bio || 'No bio provided.')}"
     </div>
     <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: capitalize;">
-      🌱 Intent: <strong>${escapeHTML(profile.intent || 'Both')}</strong>
+      🌱 Intent: <strong>${escapeHTML(intentText)}</strong>
     </div>
   `;
 
@@ -646,10 +803,11 @@ async function showProfilePreview() {
     .single();
 
   if (profile) {
+    const intentText = profile.intent ? profile.intent.charAt(0).toUpperCase() + profile.intent.slice(1) : 'Both';
     detailsEl.innerHTML = `
       <p style="margin-bottom: 8px;"><strong>Name:</strong> ${escapeHTML(profile.full_name)}</p>
       <p style="margin-bottom: 8px;"><strong>Location:</strong> ${escapeHTML(profile.location_name)}</p>
-      <p style="margin-bottom: 8px;"><strong>Intent:</strong> ${escapeHTML(profile.intent)}</p>
+      <p style="margin-bottom: 8px;"><strong>Intent:</strong> ${escapeHTML(intentText)}</p>
       <p style="margin-top: 10px;"><strong>Bio:</strong><br/>"${escapeHTML(profile.bio)}"</p>
     `;
   } else {
