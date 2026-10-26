@@ -151,6 +151,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       discoverTab.classList.remove('active');
       viewDiscover.style.display = 'none';
       viewConnections.style.display = 'block';
+      // Hide unread indicator dot when viewing connections tab
+      const unreadDot = document.getElementById('unread-dot');
+      if (unreadDot) unreadDot.style.display = 'none';
       await loadConnectionsList();
     });
   }
@@ -245,11 +248,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Chat Navigation & Messaging Listeners
   const backToConnectionsBtn = document.getElementById('back-to-connections-btn');
   if (backToConnectionsBtn) {
-    backToConnectionsBtn.addEventListener('click', () => {
+    backToConnectionsBtn.addEventListener('click', async () => {
       showSection('dashboard-section');
+      await loadConnectionsList();
     });
   }
 
@@ -267,7 +270,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Chat Partner Profile / Unmatch Trigger
   const chatHeaderProfileTrigger = document.getElementById('chat-header-profile-trigger');
   const partnerProfileModal = document.getElementById('partner-profile-modal');
   const closePartnerModalBtn = document.getElementById('close-partner-modal-btn');
@@ -412,6 +414,7 @@ async function loadDashboard() {
   currentCardIndex = 0;
   
   await updateActiveChatCount();
+  await checkForUnreadMessages();
   renderDeck();
 }
 
@@ -426,6 +429,36 @@ async function updateActiveChatCount() {
   const countBadge = document.getElementById('active-chat-count');
   if (countBadge) {
     countBadge.innerHTML = `${count} / 3`;
+  }
+}
+
+async function checkForUnreadMessages() {
+  // Check if there are incoming messages from others that are newer than last check, or simply show unread dot if last message sender is not current user
+  const { data: connections } = await supabaseClient
+    .from('connections')
+    .select('id')
+    .eq('status', 'accepted')
+    .or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
+
+  if (!connections || connections.length === 0) return;
+
+  const connectionIds = connections.map(c => c.id);
+
+  const { data: latestMsgs } = await supabaseClient
+    .from('messages')
+    .select('sender_id, created_at, connection_id')
+    .in('connection_id', connectionIds)
+    .order('created_at', { ascending: false });
+
+  if (latestMsgs && latestMsgs.length > 0) {
+    // If the very latest message across active chats was sent by someone else, show unread dot
+    const mostRecent = latestMsgs[0];
+    if (mostRecent.sender_id !== currentUser.id) {
+      const unreadDot = document.getElementById('unread-dot');
+      if (unreadDot && !document.getElementById('view-connections').classList.contains('active')) {
+        unreadDot.style.display = 'inline-block';
+      }
+    }
   }
 }
 
@@ -534,7 +567,7 @@ async function handleLeftSwipe(targetProfile) {
     ], { onConflict: 'requester_id,receiver_id' });
 }
 
-// CONNECTIONS & MATCHES LIST RENDERER
+// CONNECTIONS & MATCHES LIST RENDERER WITH LAST MESSAGE PREVIEW & SORTING
 async function loadConnectionsList() {
   const acceptedContainer = document.getElementById('accepted-matches-container');
   const pendingContainer = document.getElementById('pending-matches-container');
@@ -559,20 +592,41 @@ async function loadConnectionsList() {
   if (accepted.length === 0) {
     acceptedContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.88rem;">No active matches yet. Keep exploring!</p>';
   } else {
+    // Fetch last message for each accepted match to enable sorting and preview text
+    const acceptedWithMessages = await Promise.all(accepted.map(async (c) => {
+      const { data: msgs } = await supabaseClient
+        .from('messages')
+        .select('message_text, created_at')
+        .eq('connection_id', c.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      const lastMsg = msgs && msgs.length > 0 ? msgs[0] : null;
+      return {
+        connection: c,
+        lastMessageText: lastMsg ? lastMsg.message_text : 'Tap to chat',
+        lastMessageTime: lastMsg ? new Date(lastMsg.created_at).getTime() : new Date(c.updated_at || c.created_at).getTime()
+      };
+    }));
+
+    // Sort active matches by most recent message or update time
+    acceptedWithMessages.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
+
     acceptedContainer.innerHTML = '';
-    accepted.forEach(c => {
+    acceptedWithMessages.forEach(itemData => {
+      const c = itemData.connection;
       const otherUser = c.requester_id === currentUser.id ? c.receiver : c.requester;
       if (!otherUser) return;
+
       const item = document.createElement('div');
       item.className = 'connection-item';
       item.innerHTML = `
         <div class="connection-info">
           <h4>${escapeHTML(otherUser.full_name)}</h4>
-          <p>📍 ${escapeHTML(otherUser.location_name)} (Tap to chat)</p>
+          <p style="color: var(--text-muted); font-size: 0.82rem; margin-top: 2px; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(itemData.lastMessageText)}</p>
         </div>
         <span class="status-tag accepted">Chat 💬</span>
       `;
-      // Clicking accepted match opens chat
       item.addEventListener('click', () => {
         openChat(c.id, otherUser);
       });
@@ -673,6 +727,12 @@ async function sendChatMessage() {
   if (error) {
     alert('Error sending message: ' + error.message);
   } else {
+    // Also update connection's updated_at timestamp so sorting updates instantly
+    await supabaseClient
+      .from('connections')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('id', activeChatConnectionId);
+
     await loadChatMessages();
   }
 }
