@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
 
   <!-- External Stylesheet & Supabase SDK -->
-  <link rel="stylesheet" href="style.css?v=10" />
+  <link rel="stylesheet" href="style.css?v=11" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -115,6 +115,7 @@
       </div>
 
       <h3 style="font-size: 1.1rem; color: var(--primary); margin-top: 24px; margin-bottom: 12px;">Pending Requests</h3>
+      <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">Tap any incoming request to review and respond.</p>
       <div id="pending-matches-container" class="connections-list">
         <p style="color: var(--text-muted); font-size: 0.88rem;">Loading pending requests...</p>
       </div>
@@ -133,7 +134,25 @@
   </div>
 </div>
 
-<script src="app.js?v=10"></script>
+<!-- Incoming Profile Review Modal -->
+<div id="review-modal" class="modal">
+  <div class="modal-content" style="max-width: 440px;">
+    <h3 style="color: var(--primary); margin-bottom: 4px;">Review Incoming Like</h3>
+    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 16px;">This user sent you a connection request.</p>
+    
+    <div id="review-profile-body" style="background: #faf9f7; border: 1px solid var(--border); padding: 16px; border-radius: 10px; margin-bottom: 20px;">
+      <!-- Populated dynamically -->
+    </div>
+
+    <div style="display: flex; gap: 12px;">
+      <button type="button" id="review-pass-btn" style="background: #ffffff; color: #d9534f; border: 1px solid #f5c6cb; flex: 1;">Pass (✕)</button>
+      <button type="button" id="review-connect-btn" style="background: var(--primary); color: #ffffff; flex: 1;">Accept (♥)</button>
+    </div>
+    <button type="button" id="close-review-modal-btn" style="background: transparent; color: var(--text-muted); border: none; margin-top: 10px; font-size: 0.85rem;">Cancel</button>
+  </div>
+</div>
+
+<script src="app.js?v=11"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
