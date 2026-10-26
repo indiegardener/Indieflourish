@@ -18,7 +18,6 @@ function showSection(sectionId) {
   const activeEl = document.getElementById(sectionId);
   if (activeEl) activeEl.classList.add('active');
 
-  // Show header menu only on dashboard
   const menuContainer = document.getElementById('header-menu-container');
   if (menuContainer) {
     menuContainer.style.display = (sectionId === 'dashboard-section') ? 'block' : 'none';
@@ -26,10 +25,10 @@ function showSection(sectionId) {
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
-  // 1. Check Magic Link Tokens from URL Hash
+  // 1. Check Magic Link Tokens
   const hash = window.location.hash;
   if (hash && (hash.includes('access_token') || hash.includes('type=signup') || hash.includes('type=magiclink'))) {
-    const { data, error } = await supabaseClient.auth.getSessionFromUrl({ url: window.location.href });
+    const { data } = await supabaseClient.auth.getSessionFromUrl({ url: window.location.href });
     if (data && data.session) {
       currentUser = data.session.user;
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -45,7 +44,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     await checkProfileStatus();
   }
 
-  // 3. Auth Send Button Listener
+  // 3. Auth Button Listener
   const sendBtn = document.getElementById('send-magic-link-btn');
   if (sendBtn) {
     sendBtn.addEventListener('click', async () => {
@@ -87,41 +86,24 @@ window.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      // Ensure active user exists (fetch dynamically if memory reference was lost during hash redirect)
       if (!currentUser) {
         const { data: { session } } = await supabaseClient.auth.getSession();
-        if (session && session.user) {
-          currentUser = session.user;
-        } else {
-          alert('Session expired or user not recognized. Please request a new magic link.');
-          showSection('auth-section');
-          return;
-        }
+        if (session && session.user) currentUser = session.user;
       }
 
       saveProfileBtn.disabled = true;
       saveProfileBtn.textContent = 'Saving Profile...';
 
-      // Upsert profile data
       const { error } = await supabaseClient.from('profiles').upsert([
-        { 
-          id: currentUser.id, 
-          full_name: fullName, 
-          location_name: location, 
-          intent: intent, 
-          bio: bio,
-          updated_at: new Date().toISOString()
-        }
+        { id: currentUser.id, full_name: fullName, location_name: location, intent: intent, bio: bio, updated_at: new Date().toISOString() }
       ], { onConflict: 'id' });
 
       saveProfileBtn.disabled = false;
       saveProfileBtn.textContent = 'Save Profile & Begin Quiz';
 
       if (error) {
-        console.error('Profile Save Error:', error);
         alert('Error saving profile: ' + error.message);
       } else {
-        // Transition cleanly to questionnaire
         await loadQuestionnaire();
       }
     });
@@ -153,7 +135,30 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // 6. Hamburger Menu Listeners
+  // 6. Navigation Tabs
+  const discoverTab = document.getElementById('tab-discover-btn');
+  const connectionsTab = document.getElementById('tab-connections-btn');
+  const viewDiscover = document.getElementById('view-discover');
+  const viewConnections = document.getElementById('view-connections');
+
+  if (discoverTab && connectionsTab) {
+    discoverTab.addEventListener('click', () => {
+      discoverTab.classList.add('active');
+      connectionsTab.classList.remove('active');
+      viewDiscover.style.display = 'block';
+      viewConnections.style.display = 'none';
+    });
+
+    connectionsTab.addEventListener('click', async () => {
+      connectionsTab.classList.add('active');
+      discoverTab.classList.remove('active');
+      viewDiscover.style.display = 'none';
+      viewConnections.style.display = 'block';
+      await loadConnectionsList();
+    });
+  }
+
+  // 7. Hamburger Menu & Actions
   const menuToggleBtn = document.getElementById('menu-toggle-btn');
   const dropdownMenu = document.getElementById('dropdown-menu');
 
@@ -168,7 +173,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // 7. Dropdown Menu Actions
   const profilePreviewBtn = document.getElementById('menu-profile-preview');
   const signOutBtn = document.getElementById('menu-sign-out');
   const deleteAccountBtn = document.getElementById('menu-delete-account');
@@ -210,12 +214,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   const passBtn = document.getElementById('pass-btn');
   const connectBtn = document.getElementById('connect-btn');
 
-  if (passBtn) {
-    passBtn.addEventListener('click', () => swipeCurrentCard('left'));
-  }
-  if (connectBtn) {
-    connectBtn.addEventListener('click', () => swipeCurrentCard('right'));
-  }
+  if (passBtn) passBtn.addEventListener('click', () => swipeCurrentCard('left'));
+  if (connectBtn) connectBtn.addEventListener('click', () => swipeCurrentCard('right'));
 });
 
 supabaseClient.auth.onAuthStateChange(async (event, session) => {
@@ -282,6 +282,7 @@ async function loadQuestionnaire() {
   });
 }
 
+// DASHBOARD & SWIPE DECK LOGIC
 async function loadDashboard() {
   showSection('dashboard-section');
   const deckContainer = document.getElementById('deck-container');
@@ -338,9 +339,9 @@ async function updateActiveChatCount() {
     .or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
 
   const count = activeMatches ? activeMatches.length : 0;
-  const countBadge = document.querySelector('.deck-subheader span:last-child');
+  const countBadge = document.getElementById('active-chat-count');
   if (countBadge) {
-    countBadge.innerHTML = `Active Chat: <strong>${count} / 3</strong>`;
+    countBadge.innerHTML = `${count} / 3`;
   }
 }
 
@@ -446,6 +447,70 @@ async function handleLeftSwipe(targetProfile) {
     .upsert([
       { requester_id: currentUser.id, receiver_id: targetProfile.id, status: 'rejected', created_at: new Date().toISOString() }
     ], { onConflict: 'requester_id,receiver_id' });
+}
+
+// CONNECTIONS & MATCHES LIST RENDERER
+async function loadConnectionsList() {
+  const acceptedContainer = document.getElementById('accepted-matches-container');
+  const pendingContainer = document.getElementById('pending-matches-container');
+
+  acceptedContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.88rem;">Loading...</p>';
+  pendingContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.88rem;">Loading...</p>';
+
+  const { data: connections, error } = await supabaseClient
+    .from('connections')
+    .select('*, requester:profiles!connections_requester_id_fkey(*), receiver:profiles!connections_receiver_id_fkey(*)')
+    .or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
+
+  if (error || !connections) {
+    acceptedContainer.innerHTML = '<p style="color: var(--text-muted);">No active connections yet.</p>';
+    pendingContainer.innerHTML = '<p style="color: var(--text-muted);">No pending requests.</p>';
+    return;
+  }
+
+  const accepted = connections.filter(c => c.status === 'accepted');
+  const pending = connections.filter(c => c.status === 'pending');
+
+  // Render Accepted Matches
+  if (accepted.length === 0) {
+    acceptedContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.88rem;">No active matches yet. Keep exploring!</p>';
+  } else {
+    acceptedContainer.innerHTML = '';
+    accepted.forEach(c => {
+      const otherUser = c.requester_id === currentUser.id ? c.receiver : c.requester;
+      const item = document.createElement('div');
+      item.className = 'connection-item';
+      item.innerHTML = `
+        <div class="connection-info">
+          <h4>${escapeHTML(otherUser.full_name)}</h4>
+          <p>📍 ${escapeHTML(otherUser.location_name)}</p>
+        </div>
+        <span class="status-tag accepted">Matched</span>
+      `;
+      acceptedContainer.appendChild(item);
+    });
+  }
+
+  // Render Pending Requests
+  if (pending.length === 0) {
+    pendingContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.88rem;">No pending connection requests.</p>';
+  } else {
+    pendingContainer.innerHTML = '';
+    pending.forEach(c => {
+      const otherUser = c.requester_id === currentUser.id ? c.receiver : c.requester;
+      const isSentByMe = c.requester_id === currentUser.id;
+      const item = document.createElement('div');
+      item.className = 'connection-item';
+      item.innerHTML = `
+        <div class="connection-info">
+          <h4>${escapeHTML(otherUser.full_name)}</h4>
+          <p>${isSentByMe ? 'Request sent by you' : 'Sent you a connection request'}</p>
+        </div>
+        <span class="status-tag pending">${isSentByMe ? 'Pending' : 'Incoming'}</span>
+      `;
+      pendingContainer.appendChild(item);
+    });
+  }
 }
 
 function attachSwipeEvents(card) {
