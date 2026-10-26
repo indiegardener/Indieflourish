@@ -46,8 +46,12 @@ function showSection(sectionId) {
   if (activeEl) activeEl.classList.add('active');
 
   const menuContainer = document.getElementById('header-menu-container');
-  if (menuContainer) {
-    menuContainer.style.display = (sectionId === 'dashboard-section') ? 'block' : 'none';
+  const donateBtn = document.getElementById('header-donate-btn');
+  
+  if (menuContainer && donateBtn) {
+    const isDashboard = (sectionId === 'dashboard-section' || sectionId === 'chat-section');
+    menuContainer.style.display = isDashboard ? 'block' : 'none';
+    donateBtn.style.display = isDashboard ? 'inline-block' : 'none';
   }
 }
 
@@ -96,6 +100,23 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Donate Modal Trigger
+  const headerDonateBtn = document.getElementById('header-donate-btn');
+  const donateModal = document.getElementById('donate-modal');
+  const closeDonateModalBtn = document.getElementById('close-donate-modal-btn');
+
+  if (headerDonateBtn && donateModal) {
+    headerDonateBtn.addEventListener('click', () => {
+      donateModal.classList.add('show');
+    });
+  }
+
+  if (closeDonateModalBtn && donateModal) {
+    closeDonateModalBtn.addEventListener('click', () => {
+      donateModal.classList.remove('show');
+    });
+  }
+
   // Geolocation button listener for Profile Setup
   const detectLocBtn = document.getElementById('detect-location-btn');
   if (detectLocBtn) {
@@ -112,7 +133,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Profile Save Listener
+  // Profile Save Listener (Enforces Terms Checkbox)
   const saveProfileBtn = document.getElementById('save-profile-btn');
   if (saveProfileBtn) {
     saveProfileBtn.addEventListener('click', async () => {
@@ -120,9 +141,15 @@ window.addEventListener('DOMContentLoaded', async () => {
       const location = document.getElementById('location').value.trim();
       const intent = document.getElementById('intent').value;
       const bio = document.getElementById('bio').value.trim();
+      const termsAgreed = document.getElementById('terms-agree-checkbox').checked;
 
       if (!fullName || !location) {
         alert('Please fill out your name and location.');
+        return;
+      }
+
+      if (!termsAgreed) {
+        alert('You must agree to the Terms & Conditions to create an account.');
         return;
       }
 
