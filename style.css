@@ -56,9 +56,7 @@ body {
   letter-spacing: -0.5px;
 }
 
-.menu-container {
-  position: relative;
-}
+.menu-container { position: relative; }
 
 .menu-btn {
   background: none;
@@ -105,12 +103,40 @@ body {
 .section { display: none; }
 .section.active { display: block; }
 
-/* Dashboard layout fills remaining vertical space to pin buttons at bottom */
 #dashboard-section.active {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
 }
+
+/* Nav Tabs */
+.nav-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.tab-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  padding: 10px 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 0;
+}
+
+.tab-btn.active {
+  color: var(--primary);
+  border-bottom: 2px solid var(--primary);
+  background: none;
+}
+
+.dashboard-view { display: none; }
+.dashboard-view.active { display: block; }
 
 .form-group { margin-bottom: 18px; }
 
@@ -205,11 +231,10 @@ button:hover { background-color: #233a30; }
   margin-bottom: 10px;
 }
 
-/* Stretched Swipe Deck Styles */
 .deck-container {
   position: relative;
   width: 100%;
-  height: 520px; /* Significantly taller profile card window */
+  height: 520px;
   margin-bottom: 16px;
   perspective: 1000px;
   flex-grow: 1;
@@ -282,7 +307,6 @@ button:hover { background-color: #233a30; }
   text-transform: capitalize;
 }
 
-/* Pinned at the bottom */
 .swipe-controls {
   display: flex;
   gap: 24px;
@@ -316,7 +340,53 @@ button:hover { background-color: #233a30; }
   border-color: var(--primary);
 }
 
-/* Modal for Profile Preview */
+/* Connections & Matches List Styling */
+.connections-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.connection-item {
+  background: #faf9f7;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.connection-info h4 {
+  font-size: 1rem;
+  color: var(--primary);
+  margin-bottom: 2px;
+}
+
+.connection-info p {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.status-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 12px;
+  text-transform: uppercase;
+}
+
+.status-tag.accepted {
+  background-color: var(--primary-light);
+  color: var(--primary);
+}
+
+.status-tag.pending {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+/* Modal */
 .modal {
   position: fixed;
   top: 0; left: 0; width: 100%; height: 100%;
