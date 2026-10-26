@@ -1,5 +1,5 @@
 :root {
-  --bg-color: #fbf8f3;
+  --bg-color: #fcf2f2; /* Light rose pink background */
   --card-bg: #ffffff;
   --text-main: #2b2d2f;
   --text-muted: #62666a;
@@ -355,6 +355,16 @@ button:hover { background-color: #233a30; }
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.connection-item.clickable {
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.connection-item.clickable:hover {
+  background-color: var(--primary-light);
+  border-color: var(--primary);
 }
 
 .connection-info h4 {
