@@ -51,7 +51,7 @@
   <div id="profile-section" class="section">
     <h2>Complete Your Profile</h2>
     <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
-      Authentic profiles lead to meaningful matches. No performative photos required.
+      Authentic profiles lead to meaningful matches.
     </p>
     <div class="form-group">
       <label for="full-name">Full Name or Preferred Name</label>
@@ -76,6 +76,33 @@
     <button type="button" id="save-profile-btn">Save Profile & Begin Quiz</button>
   </div>
 
+  <!-- SECTION 2.5: PHOTOS & PROMPT SETUP (New users see this right after quiz) -->
+  <div id="photos-prompt-section" class="section">
+    <h2>Add Photos & Prompt</h2>
+    <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
+      Upload up to 5 photos and answer a conversational prompt to spark a deeper connection.
+    </p>
+    <div class="form-group">
+      <label>Profile Photos (Max 5)</label>
+      <input type="file" id="photo-upload-input" accept="image/*" multiple />
+      <div id="photo-preview-grid" style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;"></div>
+    </div>
+    <div class="form-group">
+      <label for="setup-prompt-q">Prompt Question</label>
+      <select id="setup-prompt-q">
+        <option value="A simple joy that always grounds me is...">A simple joy that always grounds me is...</option>
+        <option value="My ideal Sunday looks like...">My ideal Sunday looks like...</option>
+        <option value="A book, film, or art piece that changed my perspective...">A book, film, or art piece that changed my perspective...</option>
+        <option value="What I'm most curious about lately...">What I'm most curious about lately...</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="setup-prompt-a">Your Answer</label>
+      <textarea id="setup-prompt-a" rows="2" placeholder="Write your response..."></textarea>
+    </div>
+    <button type="button" id="save-photos-prompt-btn">Complete Setup & Enter Discover</button>
+  </div>
+
   <!-- SECTION 3: QUESTIONNAIRE -->
   <div id="quiz-section" class="section">
     <div id="quiz-container"></div>
@@ -84,7 +111,6 @@
 
   <!-- SECTION 4: DASHBOARD / SWIPE MATCHES -->
   <div id="dashboard-section" class="section">
-    <!-- Dashboard Nav Tabs with Unread Notification Dot Indicator -->
     <div class="nav-tabs">
       <button type="button" class="tab-btn active" id="tab-discover-btn">Discover</button>
       <button type="button" class="tab-btn" id="tab-connections-btn">
@@ -135,8 +161,7 @@
       </div>
     </div>
 
-    <div id="chat-messages-container" class="chat-messages">
-    </div>
+    <div id="chat-messages-container" class="chat-messages"></div>
 
     <div class="chat-input-area">
       <input type="text" id="chat-message-input" placeholder="Type a thoughtful message..." />
@@ -145,14 +170,86 @@
   </div>
 </div>
 
-<!-- Profile Preview Modal -->
+<!-- Profile Preview Modal (with Edit Option) -->
 <div id="profile-modal" class="modal">
-  <div class="modal-content">
+  <div class="modal-content" style="max-height: 85vh; overflow-y: auto;">
     <h3 style="color: var(--primary); margin-bottom: 12px;">Your Profile Preview</h3>
     <div id="modal-profile-details" style="font-size: 0.9rem; color: var(--text-main); margin-bottom: 20px;">
       Loading...
     </div>
-    <button type="button" id="close-modal-btn">Close</button>
+    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+      <button type="button" id="edit-profile-btn" style="background: var(--primary-light); color: var(--primary);">✏️ Edit Profile & Photos</button>
+      <button type="button" id="close-modal-btn" style="flex: 1;">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div id="edit-profile-modal" class="modal">
+  <div class="modal-content" style="max-height: 85vh; overflow-y: auto;">
+    <h3 style="color: var(--primary); margin-bottom: 12px;">Edit Profile</h3>
+    <div class="form-group">
+      <label>Full Name</label>
+      <input type="text" id="edit-full-name" />
+    </div>
+    <div class="form-group">
+      <label>Location</label>
+      <input type="text" id="edit-location" />
+    </div>
+    <div class="form-group">
+      <label>Intent</label>
+      <select id="edit-intent">
+        <option value="both">Both</option>
+        <option value="platonic">Platonic</option>
+        <option value="romantic">Romantic</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Bio</label>
+      <textarea id="edit-bio" rows="3"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Photos (Max 5)</label>
+      <input type="file" id="edit-photo-input" accept="image/*" multiple />
+      <div id="edit-photo-preview" style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;"></div>
+    </div>
+    <div class="form-group">
+      <label>Prompt Question</label>
+      <select id="edit-prompt-q">
+        <option value="A simple joy that always grounds me is...">A simple joy that always grounds me is...</option>
+        <option value="My ideal Sunday looks like...">My ideal Sunday looks like...</option>
+        <option value="A book, film, or art piece that changed my perspective...">A book, film, or art piece that changed my perspective...</option>
+        <option value="What I'm most curious about lately...">What I'm most curious about lately...</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Prompt Answer</label>
+      <textarea id="edit-prompt-a" rows="2"></textarea>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <button type="button" id="save-edited-profile-btn" style="flex: 1;">Save Changes</button>
+      <button type="button" id="close-edit-modal-btn" style="background: var(--text-muted); flex: 1;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Comment on Bio / Answer Prompt Modal (Triggers Right Swipe) -->
+<div id="bio-comment-modal" class="modal">
+  <div class="modal-content" style="max-width: 440px;">
+    <h3 style="color: var(--primary); margin-bottom: 4px;">Connect with a Thoughtful Note</h3>
+    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 16px;">Replying to this profile's bio or prompt will automatically send a connection request (♥).</p>
+    
+    <div id="comment-target-bio" style="background: #faf9f7; border: 1px solid var(--border); padding: 14px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 16px; font-style: italic;"></div>
+
+    <div class="form-group">
+      <label for="bio-comment-input">Your Note / Reaction</label>
+      <textarea id="bio-comment-input" rows="3" placeholder="Share what resonated with you about their reflection..."></textarea>
+    </div>
+
+    <div style="display: flex; gap: 12px;">
+      <button type="button" id="send-comment-connect-btn" style="background: var(--primary); color: #ffffff; flex: 1;">Send Note & Connect (♥)</button>
+      <button type="button" id="cancel-comment-btn" style="background: #ffffff; color: var(--text-muted); border: 1px solid var(--border); flex: 1;">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -162,8 +259,7 @@
     <h3 style="color: var(--primary); margin-bottom: 4px;">Review Incoming Like</h3>
     <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 16px;">This user sent you a connection request.</p>
     
-    <div id="review-profile-body" style="background: #faf9f7; border: 1px solid var(--border); padding: 16px; border-radius: 10px; margin-bottom: 20px;">
-    </div>
+    <div id="review-profile-body" style="background: #faf9f7; border: 1px solid var(--border); padding: 16px; border-radius: 10px; margin-bottom: 20px;"></div>
 
     <div style="display: flex; gap: 12px;">
       <button type="button" id="review-pass-btn" style="background: #ffffff; color: #d9534f; border: 1px solid #f5c6cb; flex: 1;">Pass (✕)</button>
@@ -177,8 +273,7 @@
 <div id="partner-profile-modal" class="modal">
   <div class="modal-content" style="max-width: 440px;">
     <h3 style="color: var(--primary); margin-bottom: 12px;">Match Profile</h3>
-    <div id="partner-profile-body" style="background: #faf9f7; border: 1px solid var(--border); padding: 16px; border-radius: 10px; margin-bottom: 20px;">
-    </div>
+    <div id="partner-profile-body" style="background: #faf9f7; border: 1px solid var(--border); padding: 16px; border-radius: 10px; margin-bottom: 20px;"></div>
     <button type="button" id="unmatch-btn" style="background-color: #ffffff; color: #d9534f; border: 1px solid #f5c6cb; margin-bottom: 10px;">Unmatch Connection</button>
     <button type="button" id="close-partner-modal-btn" style="background: var(--primary); color: #ffffff;">Close</button>
   </div>
