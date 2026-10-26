@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
 
   <!-- External Stylesheet & Supabase SDK -->
-  <link rel="stylesheet" href="style.css?v=7" />
+  <link rel="stylesheet" href="style.css?v=10" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -23,7 +23,6 @@
   <!-- Top Navigation Header -->
   <header class="app-header">
     <h1 class="brand-title">Indieflourish</h1>
-    <!-- Hidden by default until user reaches dashboard -->
     <div class="menu-container" id="header-menu-container" style="display: none;">
       <button type="button" class="menu-btn" id="menu-toggle-btn" title="Menu">☰</button>
       <div id="dropdown-menu" class="dropdown-menu">
@@ -85,18 +84,40 @@
 
   <!-- SECTION 4: DASHBOARD / SWIPE MATCHES -->
   <div id="dashboard-section" class="section">
-    <div class="deck-subheader">
-      <span style="font-weight: 600; color: var(--primary);">Discover Profiles</span>
-      <span style="font-size: 0.75rem; color: var(--text-muted);">Active Chat: 0 / 3</span>
+    <!-- Dashboard Nav Tabs -->
+    <div class="nav-tabs">
+      <button type="button" class="tab-btn active" id="tab-discover-btn">Discover</button>
+      <button type="button" class="tab-btn" id="tab-connections-btn">Connections & Matches</button>
     </div>
 
-    <div id="deck-container" class="deck-container">
-      <p style="text-align: center; color: var(--text-muted); padding-top: 140px;">Finding like-minded people...</p>
+    <!-- VIEW A: DISCOVER SWIPE DECK -->
+    <div id="view-discover" class="dashboard-view active">
+      <div class="deck-subheader">
+        <span style="font-weight: 600; color: var(--primary);">Discover Profiles</span>
+        <span style="font-size: 0.75rem; color: var(--text-muted);">Active Chat: <strong id="active-chat-count">0 / 3</strong></span>
+      </div>
+
+      <div id="deck-container" class="deck-container">
+        <p style="text-align: center; color: var(--text-muted); padding-top: 140px;">Finding like-minded people...</p>
+      </div>
+
+      <div class="swipe-controls">
+        <button type="button" class="swipe-btn pass" id="pass-btn" title="Pass">✕</button>
+        <button type="button" class="swipe-btn connect" id="connect-btn" title="Connect">♥</button>
+      </div>
     </div>
 
-    <div class="swipe-controls">
-      <button type="button" class="swipe-btn pass" id="pass-btn" title="Pass">✕</button>
-      <button type="button" class="swipe-btn connect" id="connect-btn" title="Connect">♥</button>
+    <!-- VIEW B: CONNECTIONS & MATCHES LIST -->
+    <div id="view-connections" class="dashboard-view" style="display: none;">
+      <h3 style="font-size: 1.1rem; color: var(--primary); margin-bottom: 12px;">Active Connections</h3>
+      <div id="accepted-matches-container" class="connections-list">
+        <p style="color: var(--text-muted); font-size: 0.88rem;">Loading active matches...</p>
+      </div>
+
+      <h3 style="font-size: 1.1rem; color: var(--primary); margin-top: 24px; margin-bottom: 12px;">Pending Requests</h3>
+      <div id="pending-matches-container" class="connections-list">
+        <p style="color: var(--text-muted); font-size: 0.88rem;">Loading pending requests...</p>
+      </div>
     </div>
   </div>
 </div>
@@ -112,7 +133,7 @@
   </div>
 </div>
 
-<script src="app.js?v=8"></script>
+<script src="app.js?v=10"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
