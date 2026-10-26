@@ -12,6 +12,8 @@ let currentReviewConnection = null;
 let activeChatConnectionId = null;
 let activeChatPartner = null;
 let uploadedImageUrlsTemp = [];
+let tempLatitude = null;
+let tempLongitude = null;
 
 function showSection(sectionId) {
   const sections = ['auth-section', 'profile-section', 'photos-prompt-section', 'quiz-section', 'dashboard-section', 'chat-section'];
@@ -73,6 +75,22 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Geolocation button listener for Profile Setup
+  const detectLocBtn = document.getElementById('detect-location-btn');
+  if (detectLocBtn) {
+    detectLocBtn.addEventListener('click', () => {
+      detectUserGeolocation('location');
+    });
+  }
+
+  // Geolocation button listener for Edit Profile
+  const editDetectLocBtn = document.getElementById('edit-detect-location-btn');
+  if (editDetectLocBtn) {
+    editDetectLocBtn.addEventListener('click', () => {
+      detectUserGeolocation('edit-location');
+    });
+  }
+
   // Profile Save Listener
   const saveProfileBtn = document.getElementById('save-profile-btn');
   if (saveProfileBtn) {
@@ -96,7 +114,16 @@ window.addEventListener('DOMContentLoaded', async () => {
       saveProfileBtn.textContent = 'Saving Profile...';
 
       const { error } = await supabaseClient.from('profiles').upsert([
-        { id: currentUser.id, full_name: fullName, location_name: location, intent: intent, bio: bio, updated_at: new Date().toISOString() }
+        { 
+          id: currentUser.id, 
+          full_name: fullName, 
+          location_name: location, 
+          intent: intent, 
+          bio: bio, 
+          latitude: tempLatitude,
+          longitude: tempLongitude,
+          updated_at: new Date().toISOString() 
+        }
       ], { onConflict: 'id' });
 
       saveProfileBtn.disabled = false;
@@ -118,7 +145,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Save Photos & Prompt Step
   const savePhotosPromptBtn = document.getElementById('save-photos-prompt-btn');
   if (savePhotosPromptBtn) {
     savePhotosPromptBtn.addEventListener('click', async () => {
@@ -159,7 +185,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (error) {
         alert('Error saving answers: ' + error.message);
       } else {
-        // After quiz, prompt user to add photos & prompt
         showSection('photos-prompt-section');
       }
     });
@@ -248,7 +273,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Edit Profile Modal Listeners
   const editProfileModal = document.getElementById('edit-profile-modal');
   const closeEditModalBtn = document.getElementById('close-edit-modal-btn');
   const saveEditedProfileBtn = document.getElementById('save-edited-profile-btn');
@@ -276,16 +300,26 @@ window.addEventListener('DOMContentLoaded', async () => {
       const promptQ = document.getElementById('edit-prompt-q').value;
       const promptA = document.getElementById('edit-prompt-a').value.trim();
 
-      const { error } = await supabaseClient.from('profiles').update({
+      const updatePayload = {
         full_name: fullName,
         location_name: location,
         intent: intent,
         bio: bio,
-        images: editPhotosTemp.length > 0 ? editPhotosTemp : undefined,
         prompt_question: promptQ,
         prompt_answer: promptA,
         updated_at: new Date().toISOString()
-      }).eq('id', currentUser.id);
+      };
+
+      if (tempLatitude !== null && tempLongitude !== null) {
+        updatePayload.latitude = tempLatitude;
+        updatePayload.longitude = tempLongitude;
+      }
+
+      if (editPhotosTemp.length > 0) {
+        updatePayload.images = editPhotosTemp;
+      }
+
+      const { error } = await supabaseClient.from('profiles').update(updatePayload).eq('id', currentUser.id);
 
       if (error) {
         alert('Error updating profile: ' + error.message);
@@ -297,15 +331,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Bio Comment / Prompt Response Modal Listeners
   const bioCommentModal = document.getElementById('bio-comment-modal');
   const cancelCommentBtn = document.getElementById('cancel-comment-btn');
   const sendCommentConnectBtn = document.getElementById('send-comment-connect-btn');
 
   if (cancelCommentBtn && bioCommentModal) {
-    cancelCommentBtn.addEventListener('click', () => {
-      bioCommentModal.classList.remove('show');
-    });
+    cancelCommentBtn.addEventListener('click', () => { bioCommentModal.classList.remove('show'); });
   }
 
   if (sendCommentConnectBtn) {
@@ -327,9 +358,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const reviewConnectBtn = document.getElementById('review-connect-btn');
 
   if (closeReviewModalBtn && reviewModal) {
-    closeReviewModalBtn.addEventListener('click', () => {
-      reviewModal.classList.remove('show');
-    });
+    closeReviewModalBtn.addEventListener('click', () => { reviewModal.classList.remove('show'); });
   }
 
   if (reviewPassBtn) {
@@ -400,7 +429,60 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (connectBtn) connectBtn.addEventListener('click', () => swipeCurrentCard('right'));
 });
 
-// Image Upload Helper to Supabase Storage
+// Helper: Detect Device Geolocation and Reverse Geocode via OpenStreetMap Nominatim API
+function detectUserGeolocation(inputId) {
+  const inputEl = document.getElementById(inputId);
+  if (!navigator.geolocation) {
+    alert('Geolocation is not supported by your browser');
+    return;
+  }
+
+  inputEl.value = 'Detecting GPS location...';
+
+  navigator.geolocation.getCurrentPosition(async (position) => {
+    tempLatitude = position.coords.latitude;
+    tempLongitude = position.coords.longitude;
+
+    try {
+      // Reverse geocode lat/lng to readable city name using free OpenStreetMap Nominatim API
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${tempLatitude}&lon=${tempLongitude}`);
+      const data = await response.json();
+      
+      if (data && data.address) {
+        const city = data.address.city || data.address.town || data.address.village || data.address.state_district || '';
+        const state = data.address.state || '';
+        inputEl.value = city ? `${city}, ${state}` : data.display_name;
+      } else {
+        inputEl.value = `${tempLatitude.toFixed(2)}, ${tempLongitude.toFixed(2)}`;
+      }
+    } catch (err) {
+      inputEl.value = `${tempLatitude.toFixed(2)}, ${tempLongitude.toFixed(2)}`;
+    }
+  }, (error) => {
+    alert('Unable to retrieve your location. Please type it manually.');
+    inputEl.value = '';
+  }, { timeout: 10000 });
+}
+
+// Haversine formula to calculate distance in kilometers between two lat/lng points
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  if (!lat1 || !lon1 || !lat2 || !lon2) return 99999; // Default large distance if missing
+  const R = 6371; // Radius of the earth in km
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2)
+  ; 
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  return R * c; // Distance in km
+}
+
+function deg2rad(deg) {
+  return deg * (Math.PI/180);
+}
+
 async function uploadImagesToSupabase(files, previewContainerId) {
   const previewContainer = document.getElementById(previewContainerId);
   if (!files || files.length === 0) return [];
@@ -451,7 +533,6 @@ async function checkProfileStatus() {
   if (profile) {
     const { data: answers } = await supabaseClient.from('user_answers').select('question_id').eq('user_id', currentUser.id);
     if (answers && answers.length > 0) {
-      // Check if photos/prompt are filled
       if (!profile.images || profile.images.length === 0) {
         showSection('photos-prompt-section');
       } else {
@@ -507,12 +588,23 @@ async function loadQuestionnaire() {
   });
 }
 
+// DASHBOARD & PROXIMITY-SORTED SWIPE DECK
 async function loadDashboard() {
   showSection('dashboard-section');
   const deckContainer = document.getElementById('deck-container');
   if (!deckContainer) return;
 
-  deckContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding-top: 100px;">Finding like-minded people...</p>';
+  deckContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding-top: 100px;">Finding nearby profiles...</p>';
+
+  // Fetch current user's location coordinates
+  const { data: myProfile } = await supabaseClient
+    .from('profiles')
+    .select('latitude, longitude')
+    .eq('id', currentUser.id)
+    .single();
+
+  const myLat = myProfile ? myProfile.latitude : null;
+  const myLon = myProfile ? myProfile.longitude : null;
 
   const { data: existingConnections } = await supabaseClient
     .from('connections')
@@ -543,7 +635,16 @@ async function loadDashboard() {
     return;
   }
 
-  availableProfiles = profiles.filter(p => !excludedUserIds.has(p.id));
+  let filteredProfiles = profiles.filter(p => !excludedUserIds.has(p.id));
+
+  // Sort profiles by distance (nearest first) using Haversine formula
+  filteredProfiles.sort((a, b) => {
+    const distA = calculateDistance(myLat, myLon, a.latitude, a.longitude);
+    const distB = calculateDistance(myLat, myLon, b.latitude, b.longitude);
+    return distA - distB;
+  });
+
+  availableProfiles = filteredProfiles;
   currentCardIndex = 0;
   
   await updateActiveChatCount();
@@ -656,7 +757,6 @@ function renderDeck() {
 
   deckContainer.appendChild(card);
 
-  // Attach comment trigger
   const commentBtn = card.querySelector('#open-comment-modal-btn');
   if (commentBtn) {
     commentBtn.addEventListener('click', (e) => {
@@ -692,7 +792,6 @@ async function handleRightSwipeWithNote(targetProfile, noteText) {
       .eq('id', incomingRequest.id);
 
     if (!error) {
-      // Send the note as the first message
       await supabaseClient.from('messages').insert([
         { connection_id: incomingRequest.id, sender_id: currentUser.id, message_text: `Note: ${noteText}` }
       ]);
@@ -700,7 +799,6 @@ async function handleRightSwipeWithNote(targetProfile, noteText) {
       await updateActiveChatCount();
     }
   } else {
-    // Create new connection and send message if accepted, or insert connection as pending with message
     const { data: newConn, error } = await supabaseClient
       .from('connections')
       .upsert([
@@ -986,6 +1084,9 @@ async function openEditProfileModal() {
   document.getElementById('edit-bio').value = profile.bio || '';
   document.getElementById('edit-prompt-q').value = profile.prompt_question || 'A simple joy that always grounds me is...';
   document.getElementById('edit-prompt-a').value = profile.prompt_answer || '';
+  
+  tempLatitude = profile.latitude || null;
+  tempLongitude = profile.longitude || null;
 
   const preview = document.getElementById('edit-photo-preview');
   preview.innerHTML = '';
