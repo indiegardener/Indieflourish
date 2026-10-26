@@ -18,7 +18,7 @@ function showSection(sectionId) {
   const activeEl = document.getElementById(sectionId);
   if (activeEl) activeEl.classList.add('active');
 
-  // Control header menu visibility: only show on dashboard
+  // Show header menu only on dashboard
   const menuContainer = document.getElementById('header-menu-container');
   if (menuContainer) {
     menuContainer.style.display = (sectionId === 'dashboard-section') ? 'block' : 'none';
@@ -26,10 +26,10 @@ function showSection(sectionId) {
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
-  // 1. Check Magic Link Tokens
+  // 1. Check Magic Link Tokens from URL Hash
   const hash = window.location.hash;
   if (hash && (hash.includes('access_token') || hash.includes('type=signup') || hash.includes('type=magiclink'))) {
-    const { data } = await supabaseClient.auth.getSessionFromUrl({ url: window.location.href });
+    const { data, error } = await supabaseClient.auth.getSessionFromUrl({ url: window.location.href });
     if (data && data.session) {
       currentUser = data.session.user;
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -45,7 +45,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     await checkProfileStatus();
   }
 
-  // 3. Auth Button Listener
+  // 3. Auth Send Button Listener
   const sendBtn = document.getElementById('send-magic-link-btn');
   if (sendBtn) {
     sendBtn.addEventListener('click', async () => {
@@ -73,7 +73,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // 4. Profile Save Listener
+  // 4. Robust Profile Save Listener
   const saveProfileBtn = document.getElementById('save-profile-btn');
   if (saveProfileBtn) {
     saveProfileBtn.addEventListener('click', async () => {
@@ -87,13 +87,41 @@ window.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
+      // Ensure active user exists (fetch dynamically if memory reference was lost during hash redirect)
+      if (!currentUser) {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session && session.user) {
+          currentUser = session.user;
+        } else {
+          alert('Session expired or user not recognized. Please request a new magic link.');
+          showSection('auth-section');
+          return;
+        }
+      }
+
+      saveProfileBtn.disabled = true;
+      saveProfileBtn.textContent = 'Saving Profile...';
+
+      // Upsert profile data
       const { error } = await supabaseClient.from('profiles').upsert([
-        { id: currentUser.id, full_name: fullName, location_name: location, intent: intent, bio: bio }
+        { 
+          id: currentUser.id, 
+          full_name: fullName, 
+          location_name: location, 
+          intent: intent, 
+          bio: bio,
+          updated_at: new Date().toISOString()
+        }
       ], { onConflict: 'id' });
 
+      saveProfileBtn.disabled = false;
+      saveProfileBtn.textContent = 'Save Profile & Begin Quiz';
+
       if (error) {
+        console.error('Profile Save Error:', error);
         alert('Error saving profile: ' + error.message);
       } else {
+        // Transition cleanly to questionnaire
         await loadQuestionnaire();
       }
     });
@@ -103,6 +131,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   const submitQuizBtn = document.getElementById('submit-quiz-btn');
   if (submitQuizBtn) {
     submitQuizBtn.addEventListener('click', async () => {
+      if (!currentUser) {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session) currentUser = session.user;
+      }
+
       const payload = Object.keys(userAnswersMap).map(qid => ({
         user_id: currentUser.id,
         question_id: parseInt(qid),
@@ -135,7 +168,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // 7. Dropdown Actions
+  // 7. Dropdown Menu Actions
   const profilePreviewBtn = document.getElementById('menu-profile-preview');
   const signOutBtn = document.getElementById('menu-sign-out');
   const deleteAccountBtn = document.getElementById('menu-delete-account');
@@ -212,7 +245,7 @@ async function loadQuestionnaire() {
   const container = document.getElementById('quiz-container');
   if (!container) return;
   
-  container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">Loading your questionnaire...</p>';
+  container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">Loading questionnaire...</p>';
   const { data: questions, error } = await supabaseClient.from('questions').select('*').order('id', { ascending: true });
 
   if (error || !questions || !questions.length) {
@@ -249,7 +282,6 @@ async function loadQuestionnaire() {
   });
 }
 
-// DASHBOARD & SWIPE DECK LOGIC WITH 30-DAY LEFT-SWIPE EXPIRATION
 async function loadDashboard() {
   showSection('dashboard-section');
   const deckContainer = document.getElementById('deck-container');
