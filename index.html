@@ -323,7 +323,7 @@
   </div>
 </div>
 
-<!-- Profile Preview Modal -->
+<!-- Profile Modal -->
 <div id="profile-modal" class="modal">
   <div class="modal-content" style="max-height: 85vh; overflow-y: auto;">
     <h3 style="color: var(--primary); margin-bottom: 12px;">Your Profile</h3>
@@ -504,11 +504,16 @@
   </div>
 </div>
 
+<!-- Main Application Logic -->
 <script src="app.js?v=18"></script>
+
+<!-- Service Worker Registration -->
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed:', err));
     });
   }
-  
+</script>
+</body>
+</html>
