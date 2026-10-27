@@ -17,7 +17,6 @@ let tempLongitude = null;
 let nsfwModel = null;
 let activeReportTargetId = null;
 
-// Load NSFWJS model for client-side content moderation
 async function loadModerationModel() {
   if (window.nsfwjs) {
     nsfwModel = await nsfwjs.load();
@@ -129,87 +128,48 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  const saveProfileBtn = document.getElementById('save-profile-btn');
-  if (saveProfileBtn) {
-    saveProfileBtn.addEventListener('click', async () => {
-      const fullName = document.getElementById('full-name').value.trim();
-      const location = document.getElementById('location').value.trim();
-      const intent = document.getElementById('intent').value;
-      const bio = document.getElementById('bio').value.trim();
-      const termsAgreed = document.getElementById('terms-agree-checkbox').checked;
-
-      if (!fullName || !location) {
-        alert('Please fill out your name and location.');
-        return;
-      }
-
-      if (!termsAgreed) {
-        alert('You must agree to the Terms & Conditions to create an account.');
-        return;
-      }
-
-      if (!currentUser) {
-        const { data: sessionData } = await supabaseClient.auth.getSession();
-        if (sessionData && sessionData.session) {
-          currentUser = sessionData.session.user;
-        } else {
-          alert('Authentication error. Please refresh or re-enter your magic link.');
-          return;
-        }
-      }
-
-      saveProfileBtn.disabled = true;
-      saveProfileBtn.textContent = 'Saving Profile...';
-
-      const profileData = {
-        id: currentUser.id,
-        full_name: fullName,
-        location_name: location,
-        intent: intent,
-        bio: bio,
-        gender: document.getElementById('gender').value,
-        pronouns: document.getElementById('pronouns').value.trim(),
-        orientation: document.getElementById('orientation').value,
-        relationship_status: document.getElementById('relationship_status').value,
-        height: document.getElementById('height').value.trim(),
-        education: document.getElementById('education').value.trim(),
-        occupation: document.getElementById('occupation').value.trim(),
-        religion: document.getElementById('religion').value,
-        politics: document.getElementById('politics').value,
-        languages: document.getElementById('languages').value.trim(),
-        diet: document.getElementById('diet').value,
-        smoking: document.getElementById('smoking').value,
-        drinking: document.getElementById('drinking').value,
-        children: document.getElementById('children').value,
-        pets: document.getElementById('pets').value,
-        latitude: tempLatitude,
-        longitude: tempLongitude,
-        updated_at: new Date().toISOString()
-      };
-
-      const { error } = await supabaseClient.from('profiles').upsert([profileData], { onConflict: 'id' });
-
-      saveProfileBtn.disabled = false;
-      saveProfileBtn.textContent = 'Save Profile & Begin Quiz';
-
-      if (error) {
-        alert('Error saving profile: ' + error.message);
-      } else {
-        await loadQuestionnaire();
-      }
+  // Back button event listeners
+  const backToProfileBtn = document.getElementById('back-to-profile-btn');
+  if (backToProfileBtn) {
+    backToProfileBtn.addEventListener('click', () => {
+      showSection('profile-section');
     });
   }
 
+  const backToQuizBtn = document.getElementById('back-to-quiz-btn');
+  if (backToQuizBtn) {
+    backToQuizBtn.addEventListener('click', async () => {
+      await loadQuestionnaire();
+    });
+  }
+
+  // Sequential 1-by-1 Photo Upload Listener
   const photoInput = document.getElementById('photo-upload-input');
   if (photoInput) {
     photoInput.addEventListener('change', async (e) => {
-      uploadedImageUrlsTemp = await uploadImagesToSupabase(e.target.files, 'photo-preview-grid');
+      const files = e.target.files;
+      if (!files || files.length === 0) return;
+      if (uploadedImageUrlsTemp.length >= 5) {
+        alert('You have already uploaded the maximum of 5 photos.');
+        return;
+      }
+      const newUrls = await uploadImagesToSupabase(files[0], 'photo-preview-grid');
+      if (newUrls) {
+        uploadedImageUrlsTemp.push(newUrls);
+        updatePhotoCountIndicator();
+      }
+      photoInput.value = ''; // Reset input to allow selecting another file
     });
   }
 
   const savePhotosPromptBtn = document.getElementById('save-photos-prompt-btn');
   if (savePhotosPromptBtn) {
     savePhotosPromptBtn.addEventListener('click', async () => {
+      if (uploadedImageUrlsTemp.length === 0) {
+        alert('Please upload at least 1 photo before completing setup.');
+        return;
+      }
+
       const promptQ = document.getElementById('setup-prompt-q').value;
       const promptA = document.getElementById('setup-prompt-a').value.trim();
 
@@ -343,7 +303,13 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   if (editPhotoInput) {
     editPhotoInput.addEventListener('change', async (e) => {
-      editPhotosTemp = await uploadImagesToSupabase(e.target.files, 'edit-photo-preview');
+      const file = e.target.files[0];
+      if (file) {
+        const singleUrl = await uploadImagesToSupabase(file, 'edit-photo-preview');
+        if (singleUrl) {
+          editPhotosTemp.push(singleUrl);
+        }
+      }
     });
   }
 
@@ -534,7 +500,81 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (connectBtn) connectBtn.addEventListener('click', () => swipeCurrentCard('right'));
 });
 
-// Improved Geolocation with Immediate Feedback
+// Robust Profile Save Handler (Fixes 1st-time click without refresh)
+async function triggerSaveProfile() {
+  const fullName = document.getElementById('full-name').value.trim();
+  const location = document.getElementById('location').value.trim();
+  const intent = document.getElementById('intent').value;
+  const bio = document.getElementById('bio').value.trim();
+  const termsAgreed = document.getElementById('terms-agree-checkbox').checked;
+
+  if (!fullName || !location) {
+    alert('Please fill out your name and location.');
+    return;
+  }
+
+  if (!termsAgreed) {
+    alert('You must agree to the Terms & Conditions to create an account.');
+    return;
+  }
+
+  if (!currentUser) {
+    const { data: sessionData } = await supabaseClient.auth.getSession();
+    if (sessionData && sessionData.session) {
+      currentUser = sessionData.session.user;
+    } else {
+      alert('Authentication session not found. Please re-enter your magic link.');
+      return;
+    }
+  }
+
+  const saveBtn = document.getElementById('save-profile-btn');
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving Profile...';
+  }
+
+  const profileData = {
+    id: currentUser.id,
+    full_name: fullName,
+    location_name: location,
+    intent: intent,
+    bio: bio,
+    gender: document.getElementById('gender').value,
+    pronouns: document.getElementById('pronouns').value.trim(),
+    orientation: document.getElementById('orientation').value,
+    relationship_status: document.getElementById('relationship_status').value,
+    height: document.getElementById('height').value.trim(),
+    education: document.getElementById('education').value.trim(),
+    occupation: document.getElementById('occupation').value.trim(),
+    religion: document.getElementById('religion').value,
+    politics: document.getElementById('politics').value,
+    languages: document.getElementById('languages').value.trim(),
+    diet: document.getElementById('diet').value,
+    smoking: document.getElementById('smoking').value,
+    drinking: document.getElementById('drinking').value,
+    children: document.getElementById('children').value,
+    pets: document.getElementById('pets').value,
+    latitude: tempLatitude,
+    longitude: tempLongitude,
+    updated_at: new Date().toISOString()
+  };
+
+  const { error } = await supabaseClient.from('profiles').upsert([profileData], { onConflict: 'id' });
+
+  if (saveBtn) {
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save Profile & Begin Quiz';
+  }
+
+  if (error) {
+    alert('Error saving profile: ' + error.message);
+  } else {
+    await loadQuestionnaire();
+  }
+}
+
+// Geolocation Handler
 function detectUserGeolocation(inputId) {
   const inputEl = document.getElementById(inputId);
   if (!navigator.geolocation) {
@@ -563,7 +603,7 @@ function detectUserGeolocation(inputId) {
       inputEl.value = `${tempLatitude.toFixed(2)}, ${tempLongitude.toFixed(2)}`;
     }
   }, (error) => {
-    alert('Unable to retrieve your location. Please check permissions and type manually.');
+    alert('Unable to retrieve your location. Please type manually.');
     inputEl.value = '';
   }, { timeout: 10000, enableHighAccuracy: true });
 }
@@ -585,51 +625,55 @@ function deg2rad(deg) {
   return deg * (Math.PI/180);
 }
 
-async function uploadImagesToSupabase(files, previewContainerId) {
+// Sequential 1-by-1 Photo Upload with NSFW Check
+async function uploadImagesToSupabase(file, previewContainerId) {
   const previewContainer = document.getElementById(previewContainerId);
-  if (!files || files.length === 0) return [];
-  previewContainer.innerHTML = 'Analyzing and uploading photos...';
+  if (!file) return null;
 
-  let urls = [];
-  const maxFiles = Math.min(files.length, 5);
+  const img = document.createElement('img');
+  img.src = URL.createObjectURL(file);
+  await new Promise(resolve => img.onload = resolve);
 
-  for (let i = 0; i < maxFiles; i++) {
-    const file = files[i];
-
-    const img = document.createElement('img');
-    img.src = URL.createObjectURL(file);
-    await new Promise(resolve => img.onload = resolve);
-
-    const safe = await isImageSafe(img);
-    if (!safe) {
-      alert(`Photo "${file.name}" was flagged for explicit/suggestive content and cannot be uploaded.`);
-      continue;
-    }
-
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${currentUser.id}_${Date.now()}_${i}.${fileExt}`;
-
-    const { error: uploadError } = await supabaseClient.storage
-      .from('profile-images')
-      .upload(fileName, file);
-
-    if (!uploadError) {
-      const { data } = supabaseClient.storage.from('profile-images').getPublicUrl(fileName);
-      if (data && data.publicUrl) {
-        urls.push(data.publicUrl);
-      }
-    }
+  const safe = await isImageSafe(img);
+  if (!safe) {
+    alert(`Photo "${file.name}" was flagged for explicit content and cannot be uploaded.`);
+    return null;
   }
 
-  previewContainer.innerHTML = '';
-  urls.forEach(url => {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${currentUser.id}_${Date.now()}.${fileExt}`;
+
+  const { error: uploadError } = await supabaseClient.storage
+    .from('profile-images')
+    .upload(fileName, file);
+
+  if (uploadError) {
+    alert('Upload error: ' + uploadError.message);
+    return null;
+  }
+
+  const { data } = supabaseClient.storage.from('profile-images').getPublicUrl(fileName);
+  if (data && data.publicUrl) {
     const imgEl = document.createElement('img');
-    imgEl.src = url;
+    imgEl.src = data.publicUrl;
     imgEl.className = 'card-photo-thumb';
     previewContainer.appendChild(imgEl);
-  });
+    return data.publicUrl;
+  }
 
-  return urls;
+  return null;
+}
+
+function updatePhotoCountIndicator() {
+  const indicator = document.getElementById('photo-count-indicator');
+  if (indicator) {
+    indicator.textContent = uploadedImageUrlsTemp.length;
+  }
+  const inputEl = document.getElementById('photo-upload-input');
+  if (inputEl && uploadedImageUrlsTemp.length >= 5) {
+    inputEl.disabled = true;
+    inputEl.style.display = 'none';
+  }
 }
 
 supabaseClient.auth.onAuthStateChange(async (event, session) => {
@@ -658,7 +702,6 @@ async function checkProfileStatus() {
   }
 }
 
-// Updated Quiz Questionnaire with Progress Tracker Button
 async function loadQuestionnaire() {
   showSection('quiz-section');
   const container = document.getElementById('quiz-container');
@@ -680,7 +723,8 @@ async function loadQuestionnaire() {
     card.className = 'question-card';
     let optionsHTML = '';
     q.options.forEach(opt => {
-      optionsHTML += `<button type="button" class="option-btn" data-qid="${q.id}" data-optid="${opt.id}">${opt.label}</button>`;
+      const isSelected = userAnswersMap[q.id] === opt.id ? 'selected' : '';
+      optionsHTML += `<button type="button" class="option-btn ${isSelected}" data-qid="${q.id}" data-optid="${opt.id}">${opt.label}</button>`;
     });
     card.innerHTML = `<span class="badge">${q.category}</span><p style="font-weight: 600; font-size: 0.95rem; margin-bottom: 10px;">${idx + 1}. ${q.question_text}</p><div>${optionsHTML}</div>`;
     container.appendChild(card);
