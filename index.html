@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-title" content="Indieflourish" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
 
-  <link rel="stylesheet" href="style.css?v=17" />
+  <link rel="stylesheet" href="style.css?v=18" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/nsfwjs@2.4.2/dist/nsfwjs.min.js"></script>
@@ -26,16 +26,15 @@
     <h1 class="brand-title">Indieflourish</h1>
     
     <div style="display: flex; align-items: center; gap: 10px;">
-      <!-- Donate Button -->
       <button type="button" id="header-donate-btn" class="donate-btn" style="display: none;">❤️ Donate</button>
 
       <div class="menu-container" id="header-menu-container" style="display: none;">
         <button type="button" class="menu-btn" id="menu-toggle-btn" title="Menu">☰</button>
         <div id="dropdown-menu" class="dropdown-menu">
-          <button type="button" class="dropdown-item" id="menu-profile-preview">👤 Profile Preview</button>
-          <a href="manifesto.html" target="_blank" class="dropdown-item-link">📖 About Indieflourish</a>
-          <a href="terms.html" target="_blank" class="dropdown-item-link">📜 Terms & Conditions</a>
-          <button type="button" class="dropdown-item" id="menu-sign-out">🚪 Sign Out</button>
+          <button type="button" class="dropdown-item" id="menu-profile-preview">Profile</button>
+          <a href="manifesto.html" target="_blank" class="dropdown-item-link">About Indieflourish</a>
+          <a href="terms.html" target="_blank" class="dropdown-item-link">Terms & Conditions</a>
+          <button type="button" class="dropdown-item" id="menu-sign-out">Sign Out</button>
           <button type="button" class="dropdown-item danger" id="menu-delete-account">⚠️ Delete Account</button>
         </div>
       </div>
@@ -56,7 +55,7 @@
     <div id="auth-status" class="status-msg"></div>
   </div>
 
-  <!-- SECTION 2: PROFILE SETUP (Dropdown removed, all fields directly visible) -->
+  <!-- SECTION 2: PROFILE SETUP -->
   <div id="profile-section" class="section">
     <h2>Complete Your Profile</h2>
     <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
@@ -84,7 +83,7 @@
       <textarea id="bio" rows="3" placeholder="Share what brings you joy, your quiet routines, or what you hope to cultivate..."></textarea>
     </div>
 
-    <!-- OKCupid Style Profile Details (Expanded directly on page) -->
+    <!-- Profile Details -->
     <div style="background: #faf9f7; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 18px;">
       <h3 style="font-size: 0.95rem; color: var(--primary); margin-bottom: 12px;">Profile Details (Basics, Lifestyle, Identity)</h3>
       
@@ -230,7 +229,7 @@
     <button type="button" id="save-profile-btn" onclick="triggerSaveProfile()">Save Profile & Begin Quiz</button>
   </div>
 
-  <!-- SECTION 2.5: PHOTOS & PROMPT SETUP (Sequential 1-by-1 upload & Back button added) -->
+  <!-- SECTION 2.5: PHOTOS & PROMPT SETUP -->
   <div id="photos-prompt-section" class="section">
     <div style="display: flex; align-items: center; margin-bottom: 12px;">
       <button type="button" id="back-to-quiz-btn" class="back-btn" style="width: auto;">← Back to Quiz</button>
@@ -260,7 +259,7 @@
     <button type="button" id="save-photos-prompt-btn">Complete Setup & Enter Discover</button>
   </div>
 
-  <!-- SECTION 3: QUESTIONNAIRE (Back button added) -->
+  <!-- SECTION 3: QUESTIONNAIRE -->
   <div id="quiz-section" class="section">
     <div style="display: flex; align-items: center; margin-bottom: 12px;">
       <button type="button" id="back-to-profile-btn" class="back-btn" style="width: auto;">← Back to Profile</button>
@@ -279,7 +278,7 @@
       </button>
     </div>
 
-    <!-- VIEW A: DISCOVER SWIPE DECK -->
+    <!-- VIEW A: DISCOVER FEED -->
     <div id="view-discover" class="dashboard-view active">
       <div class="deck-subheader">
         <span style="font-size: 0.75rem; color: var(--text-muted); margin-left: auto;">Active Chat: <strong id="active-chat-count">0 / 3</strong></span>
@@ -287,11 +286,6 @@
 
       <div id="deck-container" class="deck-container">
         <p style="text-align: center; color: var(--text-muted); padding-top: 140px;">Finding nearby profiles...</p>
-      </div>
-
-      <div class="swipe-controls">
-        <button type="button" class="swipe-btn pass" id="pass-btn" title="Pass">✕</button>
-        <button type="button" class="swipe-btn connect" id="connect-btn" title="Connect">♥</button>
       </div>
     </div>
 
@@ -332,7 +326,7 @@
 <!-- Profile Preview Modal -->
 <div id="profile-modal" class="modal">
   <div class="modal-content" style="max-height: 85vh; overflow-y: auto;">
-    <h3 style="color: var(--primary); margin-bottom: 12px;">Your Profile Preview</h3>
+    <h3 style="color: var(--primary); margin-bottom: 12px;">Your Profile</h3>
     <div id="modal-profile-details" style="font-size: 0.9rem; color: var(--text-main); margin-bottom: 20px;">
       Loading...
     </div>
@@ -389,7 +383,7 @@
     </div>
 
     <div class="form-group">
-      <label>Photos (Max 5)</label>
+      <label>Photos (Max 5 - Click ✕ to remove)</label>
       <input type="file" id="edit-photo-input" accept="image/*" />
       <div id="edit-photo-preview" style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;"></div>
     </div>
@@ -510,13 +504,11 @@
   </div>
 </div>
 
-<script src="app.js?v=17"></script>
+<script src="app.js?v=18"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed:', err));
     });
   }
-</script>
-</body>
-</html>
+  
