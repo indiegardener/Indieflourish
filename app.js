@@ -52,10 +52,9 @@ function showSection(sectionId) {
     donateBtn.style.display = isDashboard ? 'inline-block' : 'none';
   }
 
-  // Hide sticky action bar if leaving discover view
   const actionBar = document.getElementById('sticky-action-bar');
   if (actionBar) {
-    actionBar.style.display = (sectionId === 'dashboard-section' && document.getElementById('view-discover').style.display !== 'none') ? 'flex' : 'none';
+    actionBar.style.display = (sectionId === 'dashboard-section' && document.getElementById('view-discover').style.display !== 'none' && currentCardIndex < availableProfiles.length) ? 'flex' : 'none';
   }
 }
 
@@ -145,7 +144,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         alert('You have already uploaded the maximum of 5 photos.');
         return;
       }
-      const newUrl = await uploadImagesToSupabase(file, 'photo-preview-grid');
+      const newUrl = await uploadImagesToSupabase(file, 'photo-preview-grid', false);
       if (newUrl) {
         uploadedImageUrlsTemp.push(newUrl);
         updatePhotoCountIndicator();
@@ -294,15 +293,22 @@ window.addEventListener('DOMContentLoaded', async () => {
   const closeEditModalBtn = document.getElementById('close-edit-modal-btn');
   const saveEditedProfileBtn = document.getElementById('save-edited-profile-btn');
   const editPhotoInput = document.getElementById('edit-photo-input');
-  let editPhotosTemp = [];
 
   if (editPhotoInput) {
     editPhotoInput.addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (file) {
-        const singleUrl = await uploadImagesToSupabase(file, 'edit-photo-preview');
-        if (singleUrl) { editPhotosTemp.push(singleUrl); }
+        if (editPhotosTemp.length >= 5) {
+          alert('Maximum 5 photos allowed.');
+          return;
+        }
+        const singleUrl = await uploadImagesToSupabase(file, 'edit-photo-preview', true);
+        if (singleUrl) { 
+          editPhotosTemp.push(singleUrl); 
+          renderEditPhotoThumbnails();
+        }
       }
+      editPhotoInput.value = '';
     });
   }
 
@@ -334,16 +340,13 @@ window.addEventListener('DOMContentLoaded', async () => {
         pets: document.getElementById('edit-pets').value,
         prompt_question: document.getElementById('edit-prompt-q').value,
         prompt_answer: document.getElementById('edit-prompt-a').value.trim(),
+        images: editPhotosTemp,
         updated_at: new Date().toISOString()
       };
 
       if (tempLatitude !== null && tempLongitude !== null) {
         updatePayload.latitude = tempLatitude;
         updatePayload.longitude = tempLongitude;
-      }
-
-      if (editPhotosTemp.length > 0) {
-        updatePayload.images = editPhotosTemp;
       }
 
       const { error } = await supabaseClient.from('profiles').update(updatePayload).eq('id', currentUser.id);
@@ -604,7 +607,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 
 function deg2rad(deg) { return deg * (Math.PI/180); }
 
-async function uploadImagesToSupabase(file, previewContainerId) {
+async function uploadImagesToSupabase(file, previewContainerId, isEditMode = false) {
   const previewContainer = document.getElementById(previewContainerId);
   if (!file) return null;
 
@@ -632,14 +635,36 @@ async function uploadImagesToSupabase(file, previewContainerId) {
 
   const { data } = supabaseClient.storage.from('profile-images').getPublicUrl(fileName);
   if (data && data.publicUrl) {
-    const imgEl = document.createElement('img');
-    imgEl.src = data.publicUrl;
-    imgEl.className = 'card-photo-thumb';
-    previewContainer.appendChild(imgEl);
+    if (!isEditMode) {
+      const wrapper = document.createElement('div');
+      wrapper.style.position = 'relative';
+      wrapper.innerHTML = `<img src="${data.publicUrl}" class="card-photo-thumb" />`;
+      previewContainer.appendChild(wrapper);
+    }
     return data.publicUrl;
   }
 
   return null;
+}
+
+function renderEditPhotoThumbnails() {
+  const preview = document.getElementById('edit-photo-preview');
+  preview.innerHTML = '';
+  editPhotosTemp.forEach((url, index) => {
+    const wrap = document.createElement('div');
+    wrap.style.position = 'relative';
+    wrap.style.display = 'inline-block';
+    wrap.innerHTML = `
+      <img src="${url}" class="card-photo-thumb" />
+      <button type="button" onclick="removeEditPhoto(${index})" style="position: absolute; top: -6px; right: -6px; background: #d9534f; color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
+    `;
+    preview.appendChild(wrap);
+  });
+}
+
+function removeEditPhoto(index) {
+  editPhotosTemp.splice(index, 1);
+  renderEditPhotoThumbnails();
 }
 
 function updatePhotoCountIndicator() {
@@ -762,18 +787,30 @@ async function loadDashboard() {
     .select('requester_id, receiver_id, status, created_at')
     .or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
 
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
   const excludedUserIds = new Set([currentUser.id]);
 
   if (existingConnections) {
     existingConnections.forEach(c => {
       const otherId = c.requester_id === currentUser.id ? c.receiver_id : c.requester_id;
-      if (c.status === 'accepted' || c.status === 'pending') {
+      const createdAt = new Date(c.created_at);
+
+      if (c.status === 'accepted') {
         excludedUserIds.add(otherId);
+      } else if (c.status === 'pending') {
+        // Incoming pending requests expire after 7 days; Sent pending requests expire after 30 days
+        const isIncoming = c.receiver_id === currentUser.id;
+        if (isIncoming && createdAt < sevenDaysAgo) {
+          // expired incoming
+        } else if (!isIncoming && createdAt < thirtyDaysAgo) {
+          // expired sent
+        } else {
+          excludedUserIds.add(otherId);
+        }
       } else if (c.status === 'rejected' && c.requester_id === currentUser.id) {
-        const createdAt = new Date(c.created_at);
         if (createdAt > thirtyDaysAgo) { excludedUserIds.add(otherId); }
       }
     });
@@ -858,7 +895,7 @@ function renderDeck() {
         </p>
       </div>
     `;
-    return; // Action bar is omitted here, so buttons won't show when "All caught up"
+    return;
   }
 
   const profile = availableProfiles[currentCardIndex];
@@ -1104,8 +1141,19 @@ async function loadConnectionsList() {
     return;
   }
 
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
   const accepted = connections.filter(c => c.status === 'accepted');
-  const pending = connections.filter(c => c.status === 'pending');
+  const pending = connections.filter(c => {
+    if (c.status !== 'pending') return false;
+    const createdAt = new Date(c.created_at);
+    const isIncoming = c.receiver_id === currentUser.id;
+    if (isIncoming && createdAt < sevenDaysAgo) return false;
+    if (!isIncoming && createdAt < thirtyDaysAgo) return false;
+    return true;
+  });
 
   if (accepted.length === 0) {
     acceptedContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.88rem;">No active matches yet. Keep exploring!</p>';
@@ -1321,16 +1369,8 @@ async function openEditProfileModal() {
   tempLatitude = profile.latitude || null;
   tempLongitude = profile.longitude || null;
 
-  const preview = document.getElementById('edit-photo-preview');
-  preview.innerHTML = '';
-  if (profile.images && profile.images.length > 0) {
-    profile.images.forEach(u => {
-      const img = document.createElement('img');
-      img.src = u;
-      img.className = 'card-photo-thumb';
-      preview.appendChild(img);
-    });
-  }
+  editPhotosTemp = profile.images ? [...profile.images] : [];
+  renderEditPhotoThumbnails();
 
   modal.classList.add('show');
 }
