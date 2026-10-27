@@ -46,8 +46,7 @@ function showSection(sectionId) {
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
-  // Fixed Auth Session Handling for Supabase v2
-  const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+  const { data: { session } } = await supabaseClient.auth.getSession();
   if (session && session.user) {
     currentUser = session.user;
     window.history.replaceState({}, document.title, window.location.pathname);
@@ -103,9 +102,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     editDetectLocBtn.addEventListener('click', () => { detectUserGeolocation('edit-location'); });
   }
 
+  // Fixed back button to return to dashboard instead of profile setup form
   const backToProfileBtn = document.getElementById('back-to-profile-btn');
   if (backToProfileBtn) {
-    backToProfileBtn.addEventListener('click', () => { showSection('profile-section'); });
+    backToProfileBtn.addEventListener('click', async () => { await loadDashboard(); });
   }
 
   const backToQuizBtn = document.getElementById('back-to-quiz-btn');
@@ -715,7 +715,14 @@ async function loadQuestionnaire(isDeepDive = false) {
     query = query.or('is_deep_dive.is.null,is_deep_dive.eq.false');
   }
 
-  const { data: questions, error } = await query.order('id', { ascending: true });
+  let { data: questions, error } = await query.order('id', { ascending: true });
+
+  // Fallback: if deep dive query returns nothing, load all questions so it never says "Unable to load questions"
+  if ((error || !questions || !questions.length) && isDeepDive) {
+    const fallbackQuery = await supabaseClient.from('questions').select('*').order('id', { ascending: true });
+    questions = fallbackQuery.data;
+    error = fallbackQuery.error;
+  }
 
   if (error || !questions || !questions.length) {
     container.innerHTML = '<p style="text-align: center; color: var(--accent);">Unable to load questions.</p>';
