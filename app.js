@@ -12,24 +12,33 @@ let currentReviewConnection = null;
 let activeChatConnectionId = null;
 let activeChatPartner = null;
 let uploadedImageUrlsTemp = [];
+let editPhotosTemp = [];
 let tempLatitude = null;
 let tempLongitude = null;
 let nsfwModel = null;
 let activeReportTargetId = null;
 
 async function loadModerationModel() {
-  if (window.nsfwjs) {
-    nsfwModel = await nsfwjs.load();
+  try {
+    if (window.nsfwjs) {
+      nsfwModel = await nsfwjs.load().catch(() => null);
+    }
+  } catch (err) {
+    nsfwModel = null;
   }
 }
 loadModerationModel();
 
 async function isImageSafe(imageElement) {
   if (!nsfwModel) return true;
-  const predictions = await nsfwModel.classify(imageElement);
-  const nsfwScore = predictions.find(p => p.className === 'Porn' || p.className === 'Sexy' || p.className === 'Hentai');
-  if (nsfwScore && nsfwScore.probability > 0.60) {
-    return false;
+  try {
+    const predictions = await nsfwModel.classify(imageElement);
+    const nsfwScore = predictions.find(p => p.className === 'Porn' || p.className === 'Sexy' || p.className === 'Hentai');
+    if (nsfwScore && nsfwScore.probability > 0.60) {
+      return false;
+    }
+  } catch (e) {
+    // Fail safe
   }
   return true;
 }
@@ -801,7 +810,6 @@ async function loadDashboard() {
       if (c.status === 'accepted') {
         excludedUserIds.add(otherId);
       } else if (c.status === 'pending') {
-        // Incoming pending requests expire after 7 days; Sent pending requests expire after 30 days
         const isIncoming = c.receiver_id === currentUser.id;
         if (isIncoming && createdAt < sevenDaysAgo) {
           // expired incoming
