@@ -103,62 +103,49 @@ window.addEventListener('DOMContentLoaded', async () => {
   const closeDonateModalBtn = document.getElementById('close-donate-modal-btn');
 
   if (headerDonateBtn && donateModal) {
-    headerDonateBtn.addEventListener('click', () => {
-      donateModal.classList.add('show');
-    });
+    headerDonateBtn.addEventListener('click', () => { donateModal.classList.add('show'); });
   }
 
   if (closeDonateModalBtn && donateModal) {
-    closeDonateModalBtn.addEventListener('click', () => {
-      donateModal.classList.remove('show');
-    });
+    closeDonateModalBtn.addEventListener('click', () => { donateModal.classList.remove('show'); });
   }
 
   const detectLocBtn = document.getElementById('detect-location-btn');
   if (detectLocBtn) {
-    detectLocBtn.addEventListener('click', () => {
-      detectUserGeolocation('location');
-    });
+    detectLocBtn.addEventListener('click', () => { detectUserGeolocation('location'); });
   }
 
   const editDetectLocBtn = document.getElementById('edit-detect-location-btn');
   if (editDetectLocBtn) {
-    editDetectLocBtn.addEventListener('click', () => {
-      detectUserGeolocation('edit-location');
-    });
+    editDetectLocBtn.addEventListener('click', () => { detectUserGeolocation('edit-location'); });
   }
 
-  // Back button event listeners
   const backToProfileBtn = document.getElementById('back-to-profile-btn');
   if (backToProfileBtn) {
-    backToProfileBtn.addEventListener('click', () => {
-      showSection('profile-section');
-    });
+    backToProfileBtn.addEventListener('click', () => { showSection('profile-section'); });
   }
 
   const backToQuizBtn = document.getElementById('back-to-quiz-btn');
   if (backToQuizBtn) {
-    backToQuizBtn.addEventListener('click', async () => {
-      await loadQuestionnaire();
-    });
+    backToQuizBtn.addEventListener('click', async () => { await loadQuestionnaire(); });
   }
 
   // Sequential 1-by-1 Photo Upload Listener
   const photoInput = document.getElementById('photo-upload-input');
   if (photoInput) {
     photoInput.addEventListener('change', async (e) => {
-      const files = e.target.files;
-      if (!files || files.length === 0) return;
+      const file = e.target.files[0];
+      if (!file) return;
       if (uploadedImageUrlsTemp.length >= 5) {
         alert('You have already uploaded the maximum of 5 photos.');
         return;
       }
-      const newUrls = await uploadImagesToSupabase(files[0], 'photo-preview-grid');
-      if (newUrls) {
-        uploadedImageUrlsTemp.push(newUrls);
+      const newUrl = await uploadImagesToSupabase(file, 'photo-preview-grid');
+      if (newUrl) {
+        uploadedImageUrlsTemp.push(newUrl);
         updatePhotoCountIndicator();
       }
-      photoInput.value = ''; // Reset input to allow selecting another file
+      photoInput.value = '';
     });
   }
 
@@ -223,6 +210,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       connectionsTab.classList.remove('active');
       viewDiscover.style.display = 'flex';
       viewConnections.style.display = 'none';
+      const actionbar = document.getElementById('sticky-action-bar');
+      if (actionbar) actionbar.style.display = 'flex';
     });
 
     connectionsTab.addEventListener('click', async () => {
@@ -230,6 +219,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       discoverTab.classList.remove('active');
       viewDiscover.style.display = 'none';
       viewConnections.style.display = 'flex';
+      const actionbar = document.getElementById('sticky-action-bar');
+      if (actionbar) actionbar.style.display = 'none';
+
       const unreadDot = document.getElementById('unread-dot');
       if (unreadDot) unreadDot.style.display = 'none';
       await loadConnectionsList();
@@ -245,9 +237,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       dropdownMenu.classList.toggle('show');
     });
 
-    document.addEventListener('click', () => {
-      dropdownMenu.classList.remove('show');
-    });
+    document.addEventListener('click', () => { dropdownMenu.classList.remove('show'); });
   }
 
   const profilePreviewBtn = document.getElementById('menu-profile-preview');
@@ -283,9 +273,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   if (closeModalBtn && profileModal) {
-    closeModalBtn.addEventListener('click', () => {
-      profileModal.classList.remove('show');
-    });
+    closeModalBtn.addEventListener('click', () => { profileModal.classList.remove('show'); });
   }
 
   if (editProfileBtn) {
@@ -306,17 +294,13 @@ window.addEventListener('DOMContentLoaded', async () => {
       const file = e.target.files[0];
       if (file) {
         const singleUrl = await uploadImagesToSupabase(file, 'edit-photo-preview');
-        if (singleUrl) {
-          editPhotosTemp.push(singleUrl);
-        }
+        if (singleUrl) { editPhotosTemp.push(singleUrl); }
       }
     });
   }
 
   if (closeEditModalBtn && editProfileModal) {
-    closeEditModalBtn.addEventListener('click', () => {
-      editProfileModal.classList.remove('show');
-    });
+    closeEditModalBtn.addEventListener('click', () => { editProfileModal.classList.remove('show'); });
   }
 
   if (saveEditedProfileBtn) {
@@ -393,9 +377,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const reportModal = document.getElementById('report-modal');
 
   if (closeReportModalBtn && reportModal) {
-    closeReportModalBtn.addEventListener('click', () => {
-      reportModal.classList.remove('show');
-    });
+    closeReportModalBtn.addEventListener('click', () => { reportModal.classList.remove('show'); });
   }
 
   if (submitReportBtn) {
@@ -492,15 +474,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (confirm('Are you sure you want to unmatch?')) { await unmatchCurrentConnection(); }
     });
   }
-
-  const passBtn = document.getElementById('pass-btn');
-  const connectBtn = document.getElementById('connect-btn');
-
-  if (passBtn) passBtn.addEventListener('click', () => swipeCurrentCard('left'));
-  if (connectBtn) connectBtn.addEventListener('click', () => swipeCurrentCard('right'));
 });
 
-// Robust Profile Save Handler (Fixes 1st-time click without refresh)
+// Robust Profile Save Handler
 async function triggerSaveProfile() {
   const fullName = document.getElementById('full-name').value.trim();
   const location = document.getElementById('location').value.trim();
@@ -621,9 +597,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-function deg2rad(deg) {
-  return deg * (Math.PI/180);
-}
+function deg2rad(deg) { return deg * (Math.PI/180); }
 
 // Sequential 1-by-1 Photo Upload with NSFW Check
 async function uploadImagesToSupabase(file, previewContainerId) {
@@ -666,9 +640,7 @@ async function uploadImagesToSupabase(file, previewContainerId) {
 
 function updatePhotoCountIndicator() {
   const indicator = document.getElementById('photo-count-indicator');
-  if (indicator) {
-    indicator.textContent = uploadedImageUrlsTemp.length;
-  }
+  if (indicator) { indicator.textContent = uploadedImageUrlsTemp.length; }
   const inputEl = document.getElementById('photo-upload-input');
   if (inputEl && uploadedImageUrlsTemp.length >= 5) {
     inputEl.disabled = true;
@@ -865,16 +837,20 @@ async function checkForUnreadMessages() {
   }
 }
 
+// Bumble-Style Continuous Scroll Feed Renderer
 function renderDeck() {
   const deckContainer = document.getElementById('deck-container');
   deckContainer.innerHTML = '';
 
+  const oldBar = document.getElementById('sticky-action-bar');
+  if (oldBar) oldBar.remove();
+
   if (currentCardIndex >= availableProfiles.length) {
     deckContainer.innerHTML = `
-      <div style="text-align: center; padding-top: 100px;">
+      <div style="text-align: center; padding-top: 140px;">
         <p style="font-weight: 600; font-size: 1.1rem; color: var(--primary);">All caught up!</p>
         <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 8px;">
-          You have viewed all available profiles. Expired left swipes and new members will appear here over time!
+          You have viewed all available profiles. Check back later for new members!
         </p>
       </div>
     `;
@@ -882,24 +858,45 @@ function renderDeck() {
   }
 
   const profile = availableProfiles[currentCardIndex];
-  const card = document.createElement('div');
-  card.className = 'profile-card';
-  card.id = 'active-swipe-card';
-
   const matchPercentage = Math.floor(Math.random() * 15) + 82;
   const intentText = profile.intent ? profile.intent.charAt(0).toUpperCase() + profile.intent.slice(1) : 'Both';
 
-  let mainPhotoHTML = '';
-  if (profile.images && profile.images.length > 0) {
-    mainPhotoHTML = `<img src="${profile.images[0]}" class="card-featured-photo" alt="${escapeHTML(profile.full_name)}" />`;
+  let streamHTML = '';
+
+  streamHTML += `
+    <div class="profile-feed-card">
+      <div class="feed-header-info">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div>
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">${escapeHTML(profile.full_name || 'Anonymous')}</div>
+            <div style="font-size: 0.9rem; color: var(--text-muted); margin-top: 2px;">📍 ${escapeHTML(profile.location_name || 'Location not specified')}</div>
+          </div>
+          <div class="card-match-badge" style="font-size: 0.85rem; padding: 6px 12px;">${matchPercentage}% Match</div>
+        </div>
+      </div>
+  `;
+
+  const images = profile.images || [];
+
+  if (images.length > 0) {
+    streamHTML += `<img src="${images[0]}" class="feed-photo" alt="Profile Photo" />`;
   }
 
-  const detailFields = [
+  if (profile.bio && profile.bio.trim() !== '') {
+    streamHTML += `
+      <div class="feed-bio-box">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--primary); text-transform: uppercase; margin-bottom: 4px;">About Me</div>
+        <div style="font-size: 0.95rem; color: var(--text-main);">"${escapeHTML(profile.bio)}"</div>
+      </div>
+    `;
+  }
+
+  const detailMappings = [
     { key: 'gender', icon: '👤' },
     { key: 'pronouns', icon: '🗣️' },
     { key: 'orientation', icon: '🌈' },
     { key: 'relationship_status', icon: '💍' },
-    { key: 'height', icon: '📏' },
+    { key: 'height', icon: '📏', suffix: ' cm' },
     { key: 'occupation', icon: '💼' },
     { key: 'education', icon: '🎓' },
     { key: 'religion', icon: '🕊️' },
@@ -913,62 +910,75 @@ function renderDeck() {
   ];
 
   let tagsHTML = '';
-  detailFields.forEach(f => {
-    if (profile[f.key]) {
-      tagsHTML += `<span class="detail-tag">${f.icon} ${escapeHTML(profile[f.key])}</span>`;
+  detailMappings.forEach(f => {
+    let val = profile[f.key];
+    if (val && val.trim() !== '' && val.toLowerCase() !== 'na' && val.toLowerCase() !== 'prefer not to say') {
+      let formattedVal = escapeHTML(val);
+      if (f.suffix && !formattedVal.includes('cm') && !formattedVal.includes('ft')) {
+        formattedVal += f.suffix;
+      }
+      tagsHTML += `<span class="detail-tag">${f.icon} ${formattedVal}</span>`;
     }
   });
 
   if (tagsHTML) {
-    tagsHTML = `<div class="card-details-grid">${tagsHTML}</div>`;
-  }
-
-  let promptHTML = '';
-  if (profile.prompt_question && profile.prompt_answer) {
-    promptHTML = `
-      <div class="card-prompt-box">
-        <div class="card-prompt-q">💬 ${escapeHTML(profile.prompt_question)}</div>
-        <div class="card-prompt-a">"${escapeHTML(profile.prompt_answer)}"</div>
+    streamHTML += `
+      <div class="feed-section-box">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--primary); text-transform: uppercase; margin-bottom: 8px;">Basics & Lifestyle</div>
+        <div class="card-details-grid">${tagsHTML}</div>
       </div>
     `;
   }
 
-  card.innerHTML = `
-    <div>
-      <div class="card-header">
-        <div>
-          <div class="card-name">${escapeHTML(profile.full_name || 'Anonymous')}</div>
-          <div class="card-location">📍 ${escapeHTML(profile.location_name || 'Location not specified')}</div>
-        </div>
-        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
-          <div class="card-match-badge">${matchPercentage}% Match</div>
-          <button type="button" class="report-trigger-btn" onclick="openReportModal('${profile.id}')" style="background: none; border: none; color: #d9534f; font-size: 0.75rem; cursor: pointer; padding: 0;">🚩 Report</button>
-        </div>
+  if (images.length > 1) {
+    streamHTML += `<img src="${images[1]}" class="feed-photo" alt="Profile Photo" />`;
+  }
+
+  if (profile.prompt_question && profile.prompt_answer && profile.prompt_answer.trim() !== '') {
+    streamHTML += `
+      <div class="feed-prompt-box">
+        <div class="card-prompt-q">💬 ${escapeHTML(profile.prompt_question)}</div>
+        <div style="font-size: 0.95rem; font-weight: 600; margin-top: 4px; color: var(--text-main);">"${escapeHTML(profile.prompt_answer)}"</div>
       </div>
-      ${mainPhotoHTML}
-      <div class="card-bio">
-        "${escapeHTML(profile.bio || 'Living mindfully and seeking genuine connections.')}"
+    `;
+  }
+
+  if (images.length > 2) {
+    streamHTML += `<img src="${images[2]}" class="feed-photo" alt="Profile Photo" />`;
+  }
+  if (images.length > 3) {
+    streamHTML += `<img src="${images[3]}" class="feed-photo" alt="Profile Photo" />`;
+  }
+
+  streamHTML += `
+      <div style="padding: 16px; text-align: center;">
+        <div class="card-intent" style="margin-bottom: 12px;">🌱 Intent: <strong>${escapeHTML(intentText)}</strong></div>
+        <button type="button" class="comment-bio-btn" id="open-comment-modal-btn">💬 Comment on Bio / Prompt & Connect</button>
+        <button type="button" onclick="openReportModal('${profile.id}')" style="background:none; border:none; color:#d9534f; font-size:0.8rem; cursor:pointer; margin-top: 14px;">🚩 Report This Profile</button>
       </div>
-      ${tagsHTML}
-      ${promptHTML}
-      <button type="button" class="comment-bio-btn" id="open-comment-modal-btn">💬 Comment on Bio / Answer Prompt</button>
-    </div>
-    <div class="card-intent" style="margin-top: 10px;">
-      🌱 Intent: <strong>${escapeHTML(intentText)}</strong>
     </div>
   `;
 
-  deckContainer.appendChild(card);
+  deckContainer.innerHTML = streamHTML;
 
-  const commentBtn = card.querySelector('#open-comment-modal-btn');
+  const actionBar = document.createElement('div');
+  actionBar.className = 'sticky-action-bar';
+  actionBar.id = 'sticky-action-bar';
+  actionBar.innerHTML = `
+    <button type="button" class="action-circle-btn pass" id="bar-pass-btn" title="Pass">✕</button>
+    <button type="button" class="action-circle-btn super-like" id="bar-super-btn" title="Super Connect">⭐</button>
+    <button type="button" class="action-circle-btn connect" id="bar-connect-btn" title="Connect">♥</button>
+  `;
+  document.getElementById('app-container').appendChild(actionBar);
+
+  document.getElementById('bar-pass-btn').addEventListener('click', () => swipeCurrentCard('left'));
+  document.getElementById('bar-connect-btn').addEventListener('click', () => swipeCurrentCard('right'));
+  document.getElementById('bar-super-btn').addEventListener('click', () => { openCommentModal(profile); });
+
+  const commentBtn = deckContainer.querySelector('#open-comment-modal-btn');
   if (commentBtn) {
-    commentBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      openCommentModal(profile);
-    });
+    commentBtn.addEventListener('click', () => { openCommentModal(profile); });
   }
-
-  attachSwipeEvents(card);
 }
 
 function openCommentModal(profile) {
@@ -1023,14 +1033,7 @@ async function handleRightSwipeWithNote(targetProfile, noteText) {
 }
 
 async function swipeCurrentCard(direction) {
-  const card = document.getElementById('active-swipe-card');
-  if (!card) return;
-
   const targetProfile = availableProfiles[currentCardIndex];
-
-  const moveX = direction === 'right' ? window.innerWidth : -window.innerWidth;
-  card.style.transform = `translate(${moveX}px, 50px) rotate(${direction === 'right' ? 25 : -25}deg)`;
-  card.style.opacity = '0';
 
   if (targetProfile) {
     if (direction === 'right') {
@@ -1040,10 +1043,8 @@ async function swipeCurrentCard(direction) {
     }
   }
 
-  setTimeout(() => {
-    currentCardIndex++;
-    renderDeck();
-  }, 300);
+  currentCardIndex++;
+  renderDeck();
 }
 
 async function handleRightSwipe(targetProfile) {
@@ -1423,49 +1424,6 @@ function openReportModal(targetUserId) {
   activeReportTargetId = targetUserId;
   document.getElementById('report-details').value = '';
   document.getElementById('report-modal').classList.add('show');
-}
-
-function attachSwipeEvents(card) {
-  let startX = 0;
-  let currentX = 0;
-  let isDragging = false;
-
-  const onStart = (e) => {
-    isDragging = true;
-    startX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-    card.style.transition = 'none';
-  };
-
-  const onMove = (e) => {
-    if (!isDragging) return;
-    currentX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-    const deltaX = currentX - startX;
-    const rotate = deltaX * 0.08;
-    card.style.transform = `translateX(${deltaX}px) rotate(${rotate}deg)`;
-  };
-
-  const onEnd = () => {
-    if (!isDragging) return;
-    isDragging = false;
-    card.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
-
-    const deltaX = currentX - startX;
-    if (deltaX > 100) {
-      swipeCurrentCard('right');
-    } else if (deltaX < -100) {
-      swipeCurrentCard('left');
-    } else {
-      card.style.transform = 'translateX(0px) rotate(0deg)';
-    }
-  };
-
-  card.addEventListener('mousedown', onStart);
-  card.addEventListener('mousemove', onMove);
-  card.addEventListener('mouseup', onEnd);
-  card.addEventListener('mouseleave', onEnd);
-  card.addEventListener('touchstart', onStart, { passive: true });
-  card.addEventListener('touchmove', onMove, { passive: true });
-  card.addEventListener('touchend', onEnd);
 }
 
 async function deleteUserAccount() {
