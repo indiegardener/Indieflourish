@@ -133,7 +133,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Profile Save Listener (Enforces Terms Checkbox & Ensures Reliable Session Initialization)
+  // Profile Save Listener with OKCupid Details Payload
   const saveProfileBtn = document.getElementById('save-profile-btn');
   if (saveProfileBtn) {
     saveProfileBtn.addEventListener('click', async () => {
@@ -167,18 +167,33 @@ window.addEventListener('DOMContentLoaded', async () => {
       saveProfileBtn.disabled = true;
       saveProfileBtn.textContent = 'Saving Profile...';
 
-      const { error } = await supabaseClient.from('profiles').upsert([
-        { 
-          id: currentUser.id, 
-          full_name: fullName, 
-          location_name: location, 
-          intent: intent, 
-          bio: bio, 
-          latitude: tempLatitude,
-          longitude: tempLongitude,
-          updated_at: new Date().toISOString() 
-        }
-      ], { onConflict: 'id' });
+      const profileData = {
+        id: currentUser.id,
+        full_name: fullName,
+        location_name: location,
+        intent: intent,
+        bio: bio,
+        gender: document.getElementById('gender').value,
+        pronouns: document.getElementById('pronouns').value.trim(),
+        orientation: document.getElementById('orientation').value,
+        relationship_status: document.getElementById('relationship_status').value,
+        height: document.getElementById('height').value.trim(),
+        education: document.getElementById('education').value.trim(),
+        occupation: document.getElementById('occupation').value.trim(),
+        religion: document.getElementById('religion').value,
+        politics: document.getElementById('politics').value,
+        languages: document.getElementById('languages').value.trim(),
+        diet: document.getElementById('diet').value,
+        smoking: document.getElementById('smoking').value,
+        drinking: document.getElementById('drinking').value,
+        children: document.getElementById('children').value,
+        pets: document.getElementById('pets').value,
+        latitude: tempLatitude,
+        longitude: tempLongitude,
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabaseClient.from('profiles').upsert([profileData], { onConflict: 'id' });
 
       saveProfileBtn.disabled = false;
       saveProfileBtn.textContent = 'Save Profile & Begin Quiz';
@@ -347,20 +362,28 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   if (saveEditedProfileBtn) {
     saveEditedProfileBtn.addEventListener('click', async () => {
-      const fullName = document.getElementById('edit-full-name').value.trim();
-      const location = document.getElementById('edit-location').value.trim();
-      const intent = document.getElementById('edit-intent').value;
-      const bio = document.getElementById('edit-bio').value.trim();
-      const promptQ = document.getElementById('edit-prompt-q').value;
-      const promptA = document.getElementById('edit-prompt-a').value.trim();
-
       const updatePayload = {
-        full_name: fullName,
-        location_name: location,
-        intent: intent,
-        bio: bio,
-        prompt_question: promptQ,
-        prompt_answer: promptA,
+        full_name: document.getElementById('edit-full-name').value.trim(),
+        location_name: document.getElementById('edit-location').value.trim(),
+        intent: document.getElementById('edit-intent').value,
+        bio: document.getElementById('edit-bio').value.trim(),
+        gender: document.getElementById('edit-gender').value,
+        pronouns: document.getElementById('edit-pronouns').value.trim(),
+        orientation: document.getElementById('edit-orientation').value,
+        relationship_status: document.getElementById('edit-relationship_status').value,
+        height: document.getElementById('edit-height').value.trim(),
+        education: document.getElementById('edit-education').value.trim(),
+        occupation: document.getElementById('edit-occupation').value.trim(),
+        religion: document.getElementById('edit-religion').value,
+        politics: document.getElementById('edit-politics').value,
+        languages: document.getElementById('edit-languages').value.trim(),
+        diet: document.getElementById('edit-diet').value,
+        smoking: document.getElementById('edit-smoking').value,
+        drinking: document.getElementById('edit-drinking').value,
+        children: document.getElementById('edit-children').value,
+        pets: document.getElementById('edit-pets').value,
+        prompt_question: document.getElementById('edit-prompt-q').value,
+        prompt_answer: document.getElementById('edit-prompt-a').value.trim(),
         updated_at: new Date().toISOString()
       };
 
@@ -789,7 +812,7 @@ async function checkForUnreadMessages() {
   }
 }
 
-// RENDER DISCOVER CARD WITH FEATURED LARGE IMAGE
+// RENDER DISCOVER CARD WITH FEATURED IMAGE & OKDUPID DETAIL TAGS
 function renderDeck() {
   const deckContainer = document.getElementById('deck-container');
   deckContainer.innerHTML = '';
@@ -814,10 +837,39 @@ function renderDeck() {
   const matchPercentage = Math.floor(Math.random() * 15) + 82;
   const intentText = profile.intent ? profile.intent.charAt(0).toUpperCase() + profile.intent.slice(1) : 'Both';
 
-  // Large Featured Image Logic
   let mainPhotoHTML = '';
   if (profile.images && profile.images.length > 0) {
     mainPhotoHTML = `<img src="${profile.images[0]}" class="card-featured-photo" alt="${escapeHTML(profile.full_name)}" />`;
+  }
+
+  // Build OKCupid style detail tags pill list
+  const detailFields = [
+    { key: 'gender', icon: '👤' },
+    { key: 'pronouns', icon: '🗣️' },
+    { key: 'orientation', icon: '🌈' },
+    { key: 'relationship_status', icon: '💍' },
+    { key: 'height', icon: '📏' },
+    { key: 'occupation', icon: '💼' },
+    { key: 'education', icon: '🎓' },
+    { key: 'religion', icon: '🕊️' },
+    { key: 'politics', icon: '🏛️' },
+    { key: 'languages', icon: '🌐' },
+    { key: 'diet', icon: '🥗' },
+    { key: 'smoking', icon: '🚬' },
+    { key: 'drinking', icon: '🍷' },
+    { key: 'children', icon: '👶' },
+    { key: 'pets', icon: '🐾' }
+  ];
+
+  let tagsHTML = '';
+  detailFields.forEach(f => {
+    if (profile[f.key]) {
+      tagsHTML += `<span class="detail-tag">${f.icon} ${escapeHTML(profile[f.key])}</span>`;
+    }
+  });
+
+  if (tagsHTML) {
+    tagsHTML = `<div class="card-details-grid">${tagsHTML}</div>`;
   }
 
   let promptHTML = '';
@@ -846,6 +898,7 @@ function renderDeck() {
       <div class="card-bio">
         "${escapeHTML(profile.bio || 'Living mindfully and seeking genuine connections.')}"
       </div>
+      ${tagsHTML}
       ${promptHTML}
       <button type="button" class="comment-bio-btn" id="open-comment-modal-btn">💬 Comment on Bio / Answer Prompt</button>
     </div>
@@ -1192,6 +1245,21 @@ async function openEditProfileModal() {
   document.getElementById('edit-location').value = profile.location_name || '';
   document.getElementById('edit-intent').value = profile.intent || 'both';
   document.getElementById('edit-bio').value = profile.bio || '';
+  document.getElementById('edit-gender').value = profile.gender || '';
+  document.getElementById('edit-pronouns').value = profile.pronouns || '';
+  document.getElementById('edit-orientation').value = profile.orientation || '';
+  document.getElementById('edit-relationship_status').value = profile.relationship_status || '';
+  document.getElementById('edit-height').value = profile.height || '';
+  document.getElementById('edit-education').value = profile.education || '';
+  document.getElementById('edit-occupation').value = profile.occupation || '';
+  document.getElementById('edit-religion').value = profile.religion || '';
+  document.getElementById('edit-politics').value = profile.politics || '';
+  document.getElementById('edit-languages').value = profile.languages || '';
+  document.getElementById('edit-diet').value = profile.diet || '';
+  document.getElementById('edit-smoking').value = profile.smoking || '';
+  document.getElementById('edit-drinking').value = profile.drinking || '';
+  document.getElementById('edit-children').value = profile.children || '';
+  document.getElementById('edit-pets').value = profile.pets || '';
   document.getElementById('edit-prompt-q').value = profile.prompt_question || 'A simple joy that always grounds me is...';
   document.getElementById('edit-prompt-a').value = profile.prompt_answer || '';
   
