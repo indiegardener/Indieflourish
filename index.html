@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-title" content="Indieflourish" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
 
-  <link rel="stylesheet" href="style.css?v=16" />
+  <link rel="stylesheet" href="style.css?v=17" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/nsfwjs@2.4.2/dist/nsfwjs.min.js"></script>
@@ -26,7 +26,7 @@
     <h1 class="brand-title">Indieflourish</h1>
     
     <div style="display: flex; align-items: center; gap: 10px;">
-      <!-- Donate Button (Visible when logged in/on dashboard) -->
+      <!-- Donate Button -->
       <button type="button" id="header-donate-btn" class="donate-btn" style="display: none;">❤️ Donate</button>
 
       <div class="menu-container" id="header-menu-container" style="display: none;">
@@ -56,7 +56,7 @@
     <div id="auth-status" class="status-msg"></div>
   </div>
 
-  <!-- SECTION 2: PROFILE SETUP -->
+  <!-- SECTION 2: PROFILE SETUP (Dropdown removed, all fields directly visible) -->
   <div id="profile-section" class="section">
     <h2>Complete Your Profile</h2>
     <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
@@ -84,143 +84,141 @@
       <textarea id="bio" rows="3" placeholder="Share what brings you joy, your quiet routines, or what you hope to cultivate..."></textarea>
     </div>
 
-    <!-- OKCupid Style Profile Basics Accordion/Group -->
-    <details style="background: #faf9f7; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 18px;">
-      <summary style="font-weight: 700; color: var(--primary); cursor: pointer; font-size: 0.9rem;">+ Add Profile Details (Basics, Lifestyle, Identity)</summary>
+    <!-- OKCupid Style Profile Details (Expanded directly on page) -->
+    <div style="background: #faf9f7; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 18px;">
+      <h3 style="font-size: 0.95rem; color: var(--primary); margin-bottom: 12px;">Profile Details (Basics, Lifestyle, Identity)</h3>
       
-      <div style="margin-top: 14px;">
-        <h4 style="font-size: 0.85rem; color: var(--accent); margin-bottom: 8px; text-transform: uppercase;">Basics & Looks</h4>
-        <div class="form-group">
-          <label>Gender</label>
-          <select id="gender">
-            <option value="">Prefer not to say</option>
-            <option value="Man">Man</option>
-            <option value="Woman">Woman</option>
-            <option value="Non-binary">Non-binary</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Pronouns</label>
-          <input type="text" id="pronouns" placeholder="e.g. He/Him, She/Her, They/Them" />
-        </div>
-        <div class="form-group">
-          <label>Orientation</label>
-          <select id="orientation">
-            <option value="">Prefer not to say</option>
-            <option value="Straight">Straight</option>
-            <option value="Gay">Gay</option>
-            <option value="Lesbian">Lesbian</option>
-            <option value="Bisexual">Bisexual</option>
-            <option value="Pansexual">Pansexual</option>
-            <option value="Asexual">Asexual</option>
-            <option value="Queer">Queer</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Relationship Type</label>
-          <select id="relationship_status">
-            <option value="">Prefer not to say</option>
-            <option value="Monogamous, Single">Monogamous, Single</option>
-            <option value="Non-monogamous">Non-monogamous</option>
-            <option value="Open to all">Open to all</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Height</label>
-          <input type="text" id="height" placeholder="e.g. 172 cm" />
-        </div>
-
-        <h4 style="font-size: 0.85rem; color: var(--accent); margin-top: 14px; margin-bottom: 8px; text-transform: uppercase;">Background & Identity</h4>
-        <div class="form-group">
-          <label>Education / College</label>
-          <input type="text" id="education" placeholder="e.g. Visva Bharati University" />
-        </div>
-        <div class="form-group">
-          <label>Occupation</label>
-          <input type="text" id="occupation" placeholder="e.g. Fine Artist, Designer, Engineer" />
-        </div>
-        <div class="form-group">
-          <label>Religion / Beliefs</label>
-          <select id="religion">
-            <option value="">Prefer not to say</option>
-            <option value="Atheism">Atheism</option>
-            <option value="Agnosticism">Agnosticism</option>
-            <option value="Hinduism">Hinduism</option>
-            <option value="Buddhism">Buddhism</option>
-            <option value="Islam">Islam</option>
-            <option value="Christianity">Christianity</option>
-            <option value="Sikhism">Sikhism</option>
-            <option value="Spiritual">Spiritual</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Politics</label>
-          <select id="politics">
-            <option value="">Prefer not to say</option>
-            <option value="Politically liberal">Politically liberal</option>
-            <option value="Politically moderate">Politically moderate</option>
-            <option value="Politically conservative">Politically conservative</option>
-            <option value="Apolitical">Apolitical</option>
-            <option value="Other political beliefs">Other political beliefs</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Languages Spoken</label>
-          <input type="text" id="languages" placeholder="e.g. English, Hindi, Bengali" />
-        </div>
-
-        <h4 style="font-size: 0.85rem; color: var(--accent); margin-top: 14px; margin-bottom: 8px; text-transform: uppercase;">Lifestyle & Family</h4>
-        <div class="form-group">
-          <label>Diet</label>
-          <select id="diet">
-            <option value="">Prefer not to say</option>
-            <option value="Vegetarian">Vegetarian</option>
-            <option value="Vegan">Vegan</option>
-            <option value="Omnivore">Omnivore</option>
-            <option value="Eggetarian">Eggetarian</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Smoking</label>
-          <select id="smoking">
-            <option value="">Prefer not to say</option>
-            <option value="Never smokes">Never smokes</option>
-            <option value="Smokes sometimes">Smokes sometimes</option>
-            <option value="Regular smoker">Regular smoker</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Drinking</label>
-          <select id="drinking">
-            <option value="">Prefer not to say</option>
-            <option value="Never drinks">Never drinks</option>
-            <option value="Drinks sometimes">Drinks sometimes</option>
-            <option value="Regularly drinks">Regularly drinks</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Children</label>
-          <select id="children">
-            <option value="">Prefer not to say</option>
-            <option value="Doesn't have kids and doesn't want kids">Doesn't have kids and doesn't want kids</option>
-            <option value="Doesn't have kids but wants them">Doesn't have kids but wants them</option>
-            <option value="Has kids">Has kids</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Pets</label>
-          <select id="pets">
-            <option value="">Prefer not to say</option>
-            <option value="Has dog(s)">Has dog(s)</option>
-            <option value="Has cat(s)">Has cat(s)</option>
-            <option value="Has other pets">Has other pets</option>
-            <option value="No pets">No pets</option>
-          </select>
-        </div>
+      <h4 style="font-size: 0.85rem; color: var(--accent); margin-bottom: 8px; text-transform: uppercase;">Basics & Looks</h4>
+      <div class="form-group">
+        <label>Gender</label>
+        <select id="gender">
+          <option value="">Prefer not to say</option>
+          <option value="Man">Man</option>
+          <option value="Woman">Woman</option>
+          <option value="Non-binary">Non-binary</option>
+          <option value="Other">Other</option>
+        </select>
       </div>
-    </details>
+      <div class="form-group">
+        <label>Pronouns</label>
+        <input type="text" id="pronouns" placeholder="e.g. He/Him, She/Her, They/Them" />
+      </div>
+      <div class="form-group">
+        <label>Orientation</label>
+        <select id="orientation">
+          <option value="">Prefer not to say</option>
+          <option value="Straight">Straight</option>
+          <option value="Gay">Gay</option>
+          <option value="Lesbian">Lesbian</option>
+          <option value="Bisexual">Bisexual</option>
+          <option value="Pansexual">Pansexual</option>
+          <option value="Asexual">Asexual</option>
+          <option value="Queer">Queer</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Relationship Type</label>
+        <select id="relationship_status">
+          <option value="">Prefer not to say</option>
+          <option value="Monogamous, Single">Monogamous, Single</option>
+          <option value="Non-monogamous">Non-monogamous</option>
+          <option value="Open to all">Open to all</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Height</label>
+        <input type="text" id="height" placeholder="e.g. 172 cm" />
+      </div>
+
+      <h4 style="font-size: 0.85rem; color: var(--accent); margin-top: 14px; margin-bottom: 8px; text-transform: uppercase;">Background & Identity</h4>
+      <div class="form-group">
+        <label>Education / College</label>
+        <input type="text" id="education" placeholder="e.g. Visva Bharati University" />
+      </div>
+      <div class="form-group">
+        <label>Occupation</label>
+        <input type="text" id="occupation" placeholder="e.g. Fine Artist, Designer, Engineer" />
+      </div>
+      <div class="form-group">
+        <label>Religion / Beliefs</label>
+        <select id="religion">
+          <option value="">Prefer not to say</option>
+          <option value="Atheism">Atheism</option>
+          <option value="Agnosticism">Agnosticism</option>
+          <option value="Hinduism">Hinduism</option>
+          <option value="Buddhism">Buddhism</option>
+          <option value="Islam">Islam</option>
+          <option value="Christianity">Christianity</option>
+          <option value="Sikhism">Sikhism</option>
+          <option value="Spiritual">Spiritual</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Politics</label>
+        <select id="politics">
+          <option value="">Prefer not to say</option>
+          <option value="Politically liberal">Politically liberal</option>
+          <option value="Politically moderate">Politically moderate</option>
+          <option value="Politically conservative">Politically conservative</option>
+          <option value="Apolitical">Apolitical</option>
+          <option value="Other political beliefs">Other political beliefs</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Languages Spoken</label>
+        <input type="text" id="languages" placeholder="e.g. English, Hindi, Bengali" />
+      </div>
+
+      <h4 style="font-size: 0.85rem; color: var(--accent); margin-top: 14px; margin-bottom: 8px; text-transform: uppercase;">Lifestyle & Family</h4>
+      <div class="form-group">
+        <label>Diet</label>
+        <select id="diet">
+          <option value="">Prefer not to say</option>
+          <option value="Vegetarian">Vegetarian</option>
+          <option value="Vegan">Vegan</option>
+          <option value="Omnivore">Omnivore</option>
+          <option value="Eggetarian">Eggetarian</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Smoking</label>
+        <select id="smoking">
+          <option value="">Prefer not to say</option>
+          <option value="Never smokes">Never smokes</option>
+          <option value="Smokes sometimes">Smokes sometimes</option>
+          <option value="Regular smoker">Regular smoker</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Drinking</label>
+        <select id="drinking">
+          <option value="">Prefer not to say</option>
+          <option value="Never drinks">Never drinks</option>
+          <option value="Drinks sometimes">Drinks sometimes</option>
+          <option value="Regularly drinks">Regularly drinks</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Children</label>
+        <select id="children">
+          <option value="">Prefer not to say</option>
+          <option value="Doesn't have kids and doesn't want kids">Doesn't have kids and doesn't want kids</option>
+          <option value="Doesn't have kids but wants them">Doesn't have kids but wants them</option>
+          <option value="Has kids">Has kids</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Pets</label>
+        <select id="pets">
+          <option value="">Prefer not to say</option>
+          <option value="Has dog(s)">Has dog(s)</option>
+          <option value="Has cat(s)">Has cat(s)</option>
+          <option value="Has other pets">Has other pets</option>
+          <option value="No pets">No pets</option>
+        </select>
+      </div>
+    </div>
 
     <div class="form-group" style="display: flex; align-items: flex-start; gap: 10px; margin-top: 10px;">
       <input type="checkbox" id="terms-agree-checkbox" style="width: 18px; height: 18px; margin-top: 2px; cursor: pointer;" required />
@@ -229,18 +227,21 @@
       </label>
     </div>
 
-    <button type="button" id="save-profile-btn">Save Profile & Begin Quiz</button>
+    <button type="button" id="save-profile-btn" onclick="triggerSaveProfile()">Save Profile & Begin Quiz</button>
   </div>
 
-  <!-- SECTION 2.5: PHOTOS & PROMPT SETUP -->
+  <!-- SECTION 2.5: PHOTOS & PROMPT SETUP (Sequential 1-by-1 upload & Back button added) -->
   <div id="photos-prompt-section" class="section">
+    <div style="display: flex; align-items: center; margin-bottom: 12px;">
+      <button type="button" id="back-to-quiz-btn" class="back-btn" style="width: auto;">← Back to Quiz</button>
+    </div>
     <h2>Add Photos & Prompt</h2>
     <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
-      Upload up to 5 photos and answer a conversational prompt to spark a deeper connection.
+      Upload your photos 1 by 1 (up to 5 max) and answer a conversational prompt.
     </p>
     <div class="form-group">
-      <label>Profile Photos (Max 5)</label>
-      <input type="file" id="photo-upload-input" accept="image/*" multiple />
+      <label id="photo-upload-label">Profile Photos (<span id="photo-count-indicator">0</span> / 5 added)</label>
+      <input type="file" id="photo-upload-input" accept="image/*" />
       <div id="photo-preview-grid" style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;"></div>
     </div>
     <div class="form-group">
@@ -259,8 +260,11 @@
     <button type="button" id="save-photos-prompt-btn">Complete Setup & Enter Discover</button>
   </div>
 
-  <!-- SECTION 3: QUESTIONNAIRE -->
+  <!-- SECTION 3: QUESTIONNAIRE (Back button added) -->
   <div id="quiz-section" class="section">
+    <div style="display: flex; align-items: center; margin-bottom: 12px;">
+      <button type="button" id="back-to-profile-btn" class="back-btn" style="width: auto;">← Back to Profile</button>
+    </div>
     <div id="quiz-container"></div>
     <button type="button" id="submit-quiz-btn" style="display: none;">Submit Responses</button>
   </div>
@@ -365,31 +369,28 @@
       <textarea id="edit-bio" rows="3"></textarea>
     </div>
     
-    <!-- OKCupid Style Edit Details -->
-    <details style="background: #faf9f7; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 14px;">
-      <summary style="font-weight: 700; color: var(--primary); cursor: pointer; font-size: 0.9rem;">Edit Profile Details</summary>
-      <div style="margin-top: 12px;">
-        <div class="form-group"><label>Gender</label><select id="edit-gender"><option value="">Prefer not to say</option><option value="Man">Man</option><option value="Woman">Woman</option><option value="Non-binary">Non-binary</option><option value="Other">Other</option></select></div>
-        <div class="form-group"><label>Pronouns</label><input type="text" id="edit-pronouns" /></div>
-        <div class="form-group"><label>Orientation</label><select id="edit-orientation"><option value="">Prefer not to say</option><option value="Straight">Straight</option><option value="Gay">Gay</option><option value="Lesbian">Lesbian</option><option value="Bisexual">Bisexual</option><option value="Pansexual">Pansexual</option><option value="Asexual">Asexual</option><option value="Queer">Queer</option></select></div>
-        <div class="form-group"><label>Relationship Type</label><select id="edit-relationship_status"><option value="">Prefer not to say</option><option value="Monogamous, Single">Monogamous, Single</option><option value="Non-monogamous">Non-monogamous</option><option value="Open to all">Open to all</option></select></div>
-        <div class="form-group"><label>Height</label><input type="text" id="edit-height" /></div>
-        <div class="form-group"><label>Education</label><input type="text" id="edit-education" /></div>
-        <div class="form-group"><label>Occupation</label><input type="text" id="edit-occupation" /></div>
-        <div class="form-group"><label>Religion</label><select id="edit-religion"><option value="">Prefer not to say</option><option value="Atheism">Atheism</option><option value="Agnosticism">Agnosticism</option><option value="Hinduism">Hinduism</option><option value="Buddhism">Buddhism</option><option value="Islam">Islam</option><option value="Christianity">Christianity</option><option value="Sikhism">Sikhism</option><option value="Spiritual">Spiritual</option><option value="Other">Other</option></select></div>
-        <div class="form-group"><label>Politics</label><select id="edit-politics"><option value="">Prefer not to say</option><option value="Politically liberal">Politically liberal</option><option value="Politically moderate">Politically moderate</option><option value="Politically conservative">Politically conservative</option><option value="Apolitical">Apolitical</option><option value="Other political beliefs">Other political beliefs</option></select></div>
-        <div class="form-group"><label>Languages</label><input type="text" id="edit-languages" /></div>
-        <div class="form-group"><label>Diet</label><select id="edit-diet"><option value="">Prefer not to say</option><option value="Vegetarian">Vegetarian</option><option value="Vegan">Vegan</option><option value="Omnivore">Omnivore</option><option value="Eggetarian">Eggetarian</option></select></div>
-        <div class="form-group"><label>Smoking</label><select id="edit-smoking"><option value="">Prefer not to say</option><option value="Never smokes">Never smokes</option><option value="Smokes sometimes">Smokes sometimes</option><option value="Regular smoker">Regular smoker</option></select></div>
-        <div class="form-group"><label>Drinking</label><select id="edit-drinking"><option value="">Prefer not to say</option><option value="Never drinks">Never drinks</option><option value="Drinks sometimes">Drinks sometimes</option><option value="Regularly drinks">Regularly drinks</option></select></div>
-        <div class="form-group"><label>Children</label><select id="edit-children"><option value="">Prefer not to say</option><option value="Doesn't have kids and doesn't want kids">Doesn't have kids and doesn't want kids</option><option value="Doesn't have kids but wants them">Doesn't have kids but wants them</option><option value="Has kids">Has kids</option></select></div>
-        <div class="form-group"><label>Pets</label><select id="edit-pets"><option value="">Prefer not to say</option><option value="Has dog(s)">Has dog(s)</option><option value="Has cat(s)">Has cat(s)</option><option value="Has other pets">Has other pets</option><option value="No pets">No pets</option></select></div>
-      </div>
-    </details>
+    <div style="background: #faf9f7; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 14px;">
+      <h4 style="font-size: 0.9rem; color: var(--primary); margin-bottom: 10px;">Edit Profile Details</h4>
+      <div class="form-group"><label>Gender</label><select id="edit-gender"><option value="">Prefer not to say</option><option value="Man">Man</option><option value="Woman">Woman</option><option value="Non-binary">Non-binary</option><option value="Other">Other</option></select></div>
+      <div class="form-group"><label>Pronouns</label><input type="text" id="edit-pronouns" /></div>
+      <div class="form-group"><label>Orientation</label><select id="edit-orientation"><option value="">Prefer not to say</option><option value="Straight">Straight</option><option value="Gay">Gay</option><option value="Lesbian">Lesbian</option><option value="Bisexual">Bisexual</option><option value="Pansexual">Pansexual</option><option value="Asexual">Asexual</option><option value="Queer">Queer</option></select></div>
+      <div class="form-group"><label>Relationship Type</label><select id="edit-relationship_status"><option value="">Prefer not to say</option><option value="Monogamous, Single">Monogamous, Single</option><option value="Non-monogamous">Non-monogamous</option><option value="Open to all">Open to all</option></select></div>
+      <div class="form-group"><label>Height</label><input type="text" id="edit-height" /></div>
+      <div class="form-group"><label>Education</label><input type="text" id="edit-education" /></div>
+      <div class="form-group"><label>Occupation</label><input type="text" id="edit-occupation" /></div>
+      <div class="form-group"><label>Religion</label><select id="edit-religion"><option value="">Prefer not to say</option><option value="Atheism">Atheism</option><option value="Agnosticism">Agnosticism</option><option value="Hinduism">Hinduism</option><option value="Buddhism">Buddhism</option><option value="Islam">Islam</option><option value="Christianity">Christianity</option><option value="Sikhism">Sikhism</option><option value="Spiritual">Spiritual</option><option value="Other">Other</option></select></div>
+      <div class="form-group"><label>Politics</label><select id="edit-politics"><option value="">Prefer not to say</option><option value="Politically liberal">Politically liberal</option><option value="Politically moderate">Politically moderate</option><option value="Politically conservative">Politically conservative</option><option value="Apolitical">Apolitical</option><option value="Other political beliefs">Other political beliefs</option></select></div>
+      <div class="form-group"><label>Languages</label><input type="text" id="edit-languages" /></div>
+      <div class="form-group"><label>Diet</label><select id="edit-diet"><option value="">Prefer not to say</option><option value="Vegetarian">Vegetarian</option><option value="Vegan">Vegan</option><option value="Omnivore">Omnivore</option><option value="Eggetarian">Eggetarian</option></select></div>
+      <div class="form-group"><label>Smoking</label><select id="edit-smoking"><option value="">Prefer not to say</option><option value="Never smokes">Never smokes</option><option value="Smokes sometimes">Smokes sometimes</option><option value="Regular smoker">Regular smoker</option></select></div>
+      <div class="form-group"><label>Drinking</label><select id="edit-drinking"><option value="">Prefer not to say</option><option value="Never drinks">Never drinks</option><option value="Drinks sometimes">Drinks sometimes</option><option value="Regularly drinks">Regularly drinks</option></select></div>
+      <div class="form-group"><label>Children</label><select id="edit-children"><option value="">Prefer not to say</option><option value="Doesn't have kids and doesn't want kids">Doesn't have kids and doesn't want kids</option><option value="Doesn't have kids but wants them">Doesn't have kids but wants them</option><option value="Has kids">Has kids</option></select></div>
+      <div class="form-group"><label>Pets</label><select id="edit-pets"><option value="">Prefer not to say</option><option value="Has dog(s)">Has dog(s)</option><option value="Has cat(s)">Has cat(s)</option><option value="Has other pets">Has other pets</option><option value="No pets">No pets</option></select></div>
+    </div>
 
     <div class="form-group">
       <label>Photos (Max 5)</label>
-      <input type="file" id="edit-photo-input" accept="image/*" multiple />
+      <input type="file" id="edit-photo-input" accept="image/*" />
       <div id="edit-photo-preview" style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;"></div>
     </div>
     <div class="form-group">
@@ -509,7 +510,7 @@
   </div>
 </div>
 
-<script src="app.js?v=16"></script>
+<script src="app.js?v=17"></script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
