@@ -25,7 +25,6 @@ async function loadModerationModel() {
 }
 loadModerationModel();
 
-// Client-Side Image Scan for Nudity / Explicit Content
 async function isImageSafe(imageElement) {
   if (!nsfwModel) return true;
   const predictions = await nsfwModel.classify(imageElement);
@@ -100,7 +99,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Donate Modal Trigger
   const headerDonateBtn = document.getElementById('header-donate-btn');
   const donateModal = document.getElementById('donate-modal');
   const closeDonateModalBtn = document.getElementById('close-donate-modal-btn');
@@ -117,7 +115,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Geolocation button listener for Profile Setup
   const detectLocBtn = document.getElementById('detect-location-btn');
   if (detectLocBtn) {
     detectLocBtn.addEventListener('click', () => {
@@ -125,7 +122,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Geolocation button listener for Edit Profile
   const editDetectLocBtn = document.getElementById('edit-detect-location-btn');
   if (editDetectLocBtn) {
     editDetectLocBtn.addEventListener('click', () => {
@@ -133,7 +129,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Profile Save Listener with OKCupid Details Payload
   const saveProfileBtn = document.getElementById('save-profile-btn');
   if (saveProfileBtn) {
     saveProfileBtn.addEventListener('click', async () => {
@@ -153,7 +148,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      // Explicit Session Fallback to fix 1st-click issue
       if (!currentUser) {
         const { data: sessionData } = await supabaseClient.auth.getSession();
         if (sessionData && sessionData.session) {
@@ -206,7 +200,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Photo Upload Handler for Onboarding
   const photoInput = document.getElementById('photo-upload-input');
   if (photoInput) {
     photoInput.addEventListener('change', async (e) => {
@@ -268,7 +261,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     discoverTab.addEventListener('click', () => {
       discoverTab.classList.add('active');
       connectionsTab.classList.remove('active');
-      viewDiscover.style.display = 'block';
+      viewDiscover.style.display = 'flex';
       viewConnections.style.display = 'none';
     });
 
@@ -276,7 +269,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       connectionsTab.classList.add('active');
       discoverTab.classList.remove('active');
       viewDiscover.style.display = 'none';
-      viewConnections.style.display = 'block';
+      viewConnections.style.display = 'flex';
       const unreadDot = document.getElementById('unread-dot');
       if (unreadDot) unreadDot.style.display = 'none';
       await loadConnectionsList();
@@ -429,7 +422,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Report Modal Listeners
   const closeReportModalBtn = document.getElementById('close-report-modal-btn');
   const submitReportBtn = document.getElementById('submit-report-btn');
   const reportModal = document.getElementById('report-modal');
@@ -542,7 +534,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (connectBtn) connectBtn.addEventListener('click', () => swipeCurrentCard('right'));
 });
 
-// Helper: Detect Device Geolocation & Reverse Geocode via OpenStreetMap Nominatim
+// Improved Geolocation with Immediate Feedback
 function detectUserGeolocation(inputId) {
   const inputEl = document.getElementById(inputId);
   if (!navigator.geolocation) {
@@ -571,12 +563,11 @@ function detectUserGeolocation(inputId) {
       inputEl.value = `${tempLatitude.toFixed(2)}, ${tempLongitude.toFixed(2)}`;
     }
   }, (error) => {
-    alert('Unable to retrieve your location. Please type it manually.');
+    alert('Unable to retrieve your location. Please check permissions and type manually.');
     inputEl.value = '';
-  }, { timeout: 10000 });
+  }, { timeout: 10000, enableHighAccuracy: true });
 }
 
-// Haversine distance formula in kilometers
 function calculateDistance(lat1, lon1, lat2, lon2) {
   if (!lat1 || !lon1 || !lat2 || !lon2) return 99999;
   const R = 6371;
@@ -594,7 +585,6 @@ function deg2rad(deg) {
   return deg * (Math.PI/180);
 }
 
-// Image Upload Helper with NSFWJS Pre-Scan
 async function uploadImagesToSupabase(files, previewContainerId) {
   const previewContainer = document.getElementById(previewContainerId);
   if (!files || files.length === 0) return [];
@@ -668,6 +658,7 @@ async function checkProfileStatus() {
   }
 }
 
+// Updated Quiz Questionnaire with Progress Tracker Button
 async function loadQuestionnaire() {
   showSection('quiz-section');
   const container = document.getElementById('quiz-container');
@@ -702,15 +693,34 @@ async function loadQuestionnaire() {
       document.querySelectorAll(`.option-btn[data-qid="${qid}"]`).forEach(b => b.classList.remove('selected'));
       e.target.classList.add('selected');
       userAnswersMap[qid] = optid;
-      if (Object.keys(userAnswersMap).length === quizQuestions.length) {
-        const submitBtn = document.getElementById('submit-quiz-btn');
-        if (submitBtn) submitBtn.style.display = 'block';
-      }
+      updateQuizSubmitButtonState();
     });
   });
+
+  updateQuizSubmitButtonState();
 }
 
-// DASHBOARD & PROXIMITY-SORTED SWIPE DECK
+function updateQuizSubmitButtonState() {
+  const submitBtn = document.getElementById('submit-quiz-btn');
+  if (!submitBtn) return;
+
+  const answeredCount = Object.keys(userAnswersMap).length;
+  const totalCount = quizQuestions.length;
+
+  submitBtn.style.display = 'block';
+  if (answeredCount === totalCount) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Submit Responses & Continue';
+    submitBtn.style.backgroundColor = 'var(--primary)';
+    submitBtn.style.opacity = '1';
+  } else {
+    submitBtn.disabled = true;
+    submitBtn.textContent = `Answer all questions to continue (${answeredCount}/${totalCount})`;
+    submitBtn.style.backgroundColor = '#7a8c84';
+    submitBtn.style.opacity = '0.7';
+  }
+}
+
 async function loadDashboard() {
   showSection('dashboard-section');
   const deckContainer = document.getElementById('deck-container');
@@ -758,7 +768,6 @@ async function loadDashboard() {
 
   let filteredProfiles = profiles.filter(p => !excludedUserIds.has(p.id));
 
-  // Sort profiles by distance (nearest first)
   filteredProfiles.sort((a, b) => {
     const distA = calculateDistance(myLat, myLon, a.latitude, a.longitude);
     const distB = calculateDistance(myLat, myLon, b.latitude, b.longitude);
@@ -812,7 +821,6 @@ async function checkForUnreadMessages() {
   }
 }
 
-// RENDER DISCOVER CARD WITH FEATURED IMAGE & OKDUPID DETAIL TAGS
 function renderDeck() {
   const deckContainer = document.getElementById('deck-container');
   deckContainer.innerHTML = '';
@@ -842,7 +850,6 @@ function renderDeck() {
     mainPhotoHTML = `<img src="${profile.images[0]}" class="card-featured-photo" alt="${escapeHTML(profile.full_name)}" />`;
   }
 
-  // Build OKCupid style detail tags pill list
   const detailFields = [
     { key: 'gender', icon: '👤' },
     { key: 'pronouns', icon: '🗣️' },
@@ -1030,7 +1037,6 @@ async function handleLeftSwipe(targetProfile) {
     ], { onConflict: 'requester_id,receiver_id' });
 }
 
-// RENDER CONNECTIONS & MATCHES LIST WITH CIRCULAR AVATARS
 async function loadConnectionsList() {
   const acceptedContainer = document.getElementById('accepted-matches-container');
   const pendingContainer = document.getElementById('pending-matches-container');
