@@ -51,6 +51,12 @@ function showSection(sectionId) {
     menuContainer.style.display = isDashboard ? 'block' : 'none';
     donateBtn.style.display = isDashboard ? 'inline-block' : 'none';
   }
+
+  // Hide sticky action bar if leaving discover view
+  const actionBar = document.getElementById('sticky-action-bar');
+  if (actionBar) {
+    actionBar.style.display = (sectionId === 'dashboard-section' && document.getElementById('view-discover').style.display !== 'none') ? 'flex' : 'none';
+  }
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -130,7 +136,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     backToQuizBtn.addEventListener('click', async () => { await loadQuestionnaire(); });
   }
 
-  // Sequential 1-by-1 Photo Upload Listener
   const photoInput = document.getElementById('photo-upload-input');
   if (photoInput) {
     photoInput.addEventListener('change', async (e) => {
@@ -211,7 +216,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       viewDiscover.style.display = 'flex';
       viewConnections.style.display = 'none';
       const actionbar = document.getElementById('sticky-action-bar');
-      if (actionbar) actionbar.style.display = 'flex';
+      if (actionbar && currentCardIndex < availableProfiles.length) {
+        actionbar.style.display = 'flex';
+      }
     });
 
     connectionsTab.addEventListener('click', async () => {
@@ -476,7 +483,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// Robust Profile Save Handler
 async function triggerSaveProfile() {
   const fullName = document.getElementById('full-name').value.trim();
   const location = document.getElementById('location').value.trim();
@@ -550,7 +556,6 @@ async function triggerSaveProfile() {
   }
 }
 
-// Geolocation Handler
 function detectUserGeolocation(inputId) {
   const inputEl = document.getElementById(inputId);
   if (!navigator.geolocation) {
@@ -599,7 +604,6 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 
 function deg2rad(deg) { return deg * (Math.PI/180); }
 
-// Sequential 1-by-1 Photo Upload with NSFW Check
 async function uploadImagesToSupabase(file, previewContainerId) {
   const previewContainer = document.getElementById(previewContainerId);
   if (!file) return null;
@@ -854,7 +858,7 @@ function renderDeck() {
         </p>
       </div>
     `;
-    return;
+    return; // Action bar is omitted here, so buttons won't show when "All caught up"
   }
 
   const profile = availableProfiles[currentCardIndex];
