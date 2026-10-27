@@ -133,7 +133,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Profile Save Listener (Enforces Terms Checkbox)
+  // Profile Save Listener (Enforces Terms Checkbox & Ensures Reliable Session Initialization)
   const saveProfileBtn = document.getElementById('save-profile-btn');
   if (saveProfileBtn) {
     saveProfileBtn.addEventListener('click', async () => {
@@ -153,9 +153,15 @@ window.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
+      // Explicit Session Fallback to fix 1st-click issue
       if (!currentUser) {
-        const { data: { session } } = await supabaseClient.auth.getSession();
-        if (session && session.user) currentUser = session.user;
+        const { data: sessionData } = await supabaseClient.auth.getSession();
+        if (sessionData && sessionData.session) {
+          currentUser = sessionData.session.user;
+        } else {
+          alert('Authentication error. Please refresh or re-enter your magic link.');
+          return;
+        }
       }
 
       saveProfileBtn.disabled = true;
@@ -783,6 +789,7 @@ async function checkForUnreadMessages() {
   }
 }
 
+// RENDER DISCOVER CARD WITH FEATURED LARGE IMAGE
 function renderDeck() {
   const deckContainer = document.getElementById('deck-container');
   deckContainer.innerHTML = '';
@@ -807,13 +814,10 @@ function renderDeck() {
   const matchPercentage = Math.floor(Math.random() * 15) + 82;
   const intentText = profile.intent ? profile.intent.charAt(0).toUpperCase() + profile.intent.slice(1) : 'Both';
 
-  let photosHTML = '';
+  // Large Featured Image Logic
+  let mainPhotoHTML = '';
   if (profile.images && profile.images.length > 0) {
-    photosHTML = `<div class="card-photos-grid">`;
-    profile.images.forEach(url => {
-      photosHTML += `<img src="${url}" class="card-photo-thumb" />`;
-    });
-    photosHTML += `</div>`;
+    mainPhotoHTML = `<img src="${profile.images[0]}" class="card-featured-photo" alt="${escapeHTML(profile.full_name)}" />`;
   }
 
   let promptHTML = '';
@@ -838,7 +842,7 @@ function renderDeck() {
           <button type="button" class="report-trigger-btn" onclick="openReportModal('${profile.id}')" style="background: none; border: none; color: #d9534f; font-size: 0.75rem; cursor: pointer; padding: 0;">🚩 Report</button>
         </div>
       </div>
-      ${photosHTML}
+      ${mainPhotoHTML}
       <div class="card-bio">
         "${escapeHTML(profile.bio || 'Living mindfully and seeking genuine connections.')}"
       </div>
@@ -973,6 +977,7 @@ async function handleLeftSwipe(targetProfile) {
     ], { onConflict: 'requester_id,receiver_id' });
 }
 
+// RENDER CONNECTIONS & MATCHES LIST WITH CIRCULAR AVATARS
 async function loadConnectionsList() {
   const acceptedContainer = document.getElementById('accepted-matches-container');
   const pendingContainer = document.getElementById('pending-matches-container');
@@ -1021,12 +1026,17 @@ async function loadConnectionsList() {
       const otherUser = c.requester_id === currentUser.id ? c.receiver : c.requester;
       if (!otherUser) return;
 
+      const avatarHTML = (otherUser.images && otherUser.images.length > 0)
+        ? `<img src="${otherUser.images[0]}" class="connection-avatar" alt="${escapeHTML(otherUser.full_name)}" />`
+        : `<div class="connection-avatar">👤</div>`;
+
       const item = document.createElement('div');
       item.className = 'connection-item';
       item.innerHTML = `
+        ${avatarHTML}
         <div class="connection-info">
           <h4>${escapeHTML(otherUser.full_name)}</h4>
-          <p style="color: var(--text-muted); font-size: 0.82rem; margin-top: 2px; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(itemData.lastMessageText)}</p>
+          <p style="color: var(--text-muted); font-size: 0.82rem; margin-top: 2px; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(itemData.lastMessageText)}</p>
         </div>
         <span class="status-tag accepted">Chat 💬</span>
       `;
@@ -1044,9 +1054,14 @@ async function loadConnectionsList() {
       if (!otherUser) return;
       const isSentByMe = c.requester_id === currentUser.id;
 
+      const avatarHTML = (otherUser.images && otherUser.images.length > 0)
+        ? `<img src="${otherUser.images[0]}" class="connection-avatar" alt="${escapeHTML(otherUser.full_name)}" />`
+        : `<div class="connection-avatar">👤</div>`;
+
       const item = document.createElement('div');
       item.className = `connection-item ${!isSentByMe ? 'clickable' : ''}`;
       item.innerHTML = `
+        ${avatarHTML}
         <div class="connection-info">
           <h4>${escapeHTML(otherUser.full_name)}</h4>
           <p>${isSentByMe ? 'Request sent by you' : 'Tap to review profile & respond'}</p>
