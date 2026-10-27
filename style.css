@@ -20,31 +20,28 @@ body {
   line-height: 1.4;
   display: flex;
   justify-content: center;
-  align-items: center;
   min-height: 100vh;
   margin: 0;
-  overflow: hidden;
+  overflow-y: auto; /* Restores native pull-to-refresh and scrolling */
 }
 
 #app-container {
   width: 100%;
   max-width: 480px;
-  height: 100vh;
-  max-height: 100vh;
+  min-height: 100vh;
   background: var(--bg-color);
   border: none;
   border-radius: 0;
-  padding: 12px 14px;
+  padding: 12px 14px 90px 14px; /* Bottom padding prevents button clipping */
   display: flex;
   flex-direction: column;
   position: relative;
-  overflow: hidden;
 }
 
 @media (min-width: 520px) {
   #app-container {
-    height: 92vh;
-    max-height: 880px;
+    min-height: 92vh;
+    margin: 20px 0;
     border-radius: 16px;
     border: 1px solid var(--border);
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
@@ -55,8 +52,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
-  padding-bottom: 6px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
@@ -135,8 +132,6 @@ body {
   display: none; 
   flex-direction: column; 
   flex-grow: 1; 
-  overflow-y: auto; 
-  height: calc(100vh - 60px);
 }
 .section.active { 
   display: flex; 
@@ -146,13 +141,12 @@ body {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
-  overflow: hidden;
 }
 
 .nav-tabs {
   display: flex;
   border-bottom: 1px solid var(--border);
-  margin-bottom: 6px;
+  margin-bottom: 10px;
   flex-shrink: 0;
 }
 
@@ -162,7 +156,7 @@ body {
   border: none;
   border-bottom: 2px solid transparent;
   color: var(--text-muted);
-  padding: 6px 0;
+  padding: 8px 0;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -191,7 +185,6 @@ body {
   display: none; 
   flex-direction: column; 
   flex-grow: 1; 
-  overflow: hidden; 
 }
 .dashboard-view.active { 
   display: flex; 
@@ -235,6 +228,15 @@ button {
 }
 
 button:hover { background-color: #233a30; }
+
+/* Sticky Profile Save Button (Always Accessible) */
+#save-profile-btn {
+  position: sticky;
+  bottom: 16px;
+  margin-top: 20px;
+  z-index: 50;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
 
 .question-card {
   background: #faf9f7;
@@ -294,10 +296,10 @@ button:hover { background-color: #233a30; }
 .deck-container {
   position: relative;
   width: 100%;
+  min-height: 480px;
   flex-grow: 1;
-  margin-bottom: 4px;
+  margin-bottom: 10px;
   perspective: 1000px;
-  overflow: hidden;
 }
 
 .profile-card {
@@ -457,10 +459,8 @@ button:hover { background-color: #233a30; }
   gap: 20px;
   justify-content: center;
   align-items: center;
-  padding: 6px 0 2px 0;
-  margin-top: auto;
-  background: #ffffff;
-  flex-shrink: 0;
+  padding: 10px 0;
+  background: transparent;
 }
 
 .swipe-btn {
@@ -492,8 +492,6 @@ button:hover { background-color: #233a30; }
   display: flex;
   flex-direction: column;
   gap: 10px;
-  overflow-y: auto;
-  flex-grow: 1;
 }
 
 .connection-item {
@@ -569,7 +567,6 @@ button:hover { background-color: #233a30; }
   padding-bottom: 10px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 10px;
-  flex-shrink: 0;
 }
 
 .back-btn {
@@ -595,6 +592,8 @@ button:hover { background-color: #233a30; }
 
 .chat-messages {
   flex-grow: 1;
+  min-height: 340px;
+  max-height: 420px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -632,7 +631,6 @@ button:hover { background-color: #233a30; }
 .chat-input-area {
   display: flex;
   gap: 6px;
-  flex-shrink: 0;
 }
 
 .chat-input-area input {
