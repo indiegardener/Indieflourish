@@ -1,3 +1,6 @@
+/* =========================================================================
+   SECTION 1: CONSTANTS & GLOBAL STATE VARIABLES
+   ========================================================================= */
 const SUPABASE_URL = 'https://wzfhgkwivhftxdjtzapx.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6Zmhna3dpdmhmdHhkanR6YXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NTk0ODUsImV4cCI6MjEwODQzNTQ4NX0.HV12dnA-56Lm8D7UDzuoSw2cT9Nak8wBnHZoqAPgXBE';
 
@@ -5,7 +8,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 
 let currentUser = null;
 let quizQuestions = [];
-let userAnswersMap = {};
+let userAnswersMap = {}; // Stores { answer: 'opt_id', acceptable: ['opt_id_1', ...] }
 let availableProfiles = [];
 let currentCardIndex = 0;
 let currentReviewConnection = null;
@@ -17,10 +20,79 @@ let tempLatitude = null;
 let tempLongitude = null;
 let activeReportTargetId = null;
 
+
+/* =========================================================================
+   SECTION 2: UTILITY & HELPER FUNCTIONS (Image Safety, Geolocation, Math)
+   ========================================================================= */
+
+// Bypasses external AI moderation CDN calls cleanly to avoid console errors
 async function isImageSafe(imageElement) {
   return true;
 }
 
+// Calculates geographic distance in kilometers between two GPS coordinates
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  if (!lat1 || !lon1 || !lat2 || !lon2) return 99999;
+  const R = 6371;
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2); 
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  return R * c;
+}
+
+function deg2rad(deg) { return deg * (Math.PI/180); }
+
+// Automatically fetches and reverse-geocodes user browser GPS coordinates via Nominatim
+function detectUserGeolocation(inputId) {
+  const inputEl = document.getElementById(inputId);
+  if (!navigator.geolocation) {
+    alert('Geolocation is not supported by your browser');
+    return;
+  }
+
+  inputEl.value = 'Detecting GPS location...';
+
+  navigator.geolocation.getCurrentPosition(async (position) => {
+    tempLatitude = position.coords.latitude;
+    tempLongitude = position.coords.longitude;
+
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${tempLatitude}&lon=${tempLongitude}`);
+      const data = await response.json();
+      
+      if (data && data.address) {
+        const city = data.address.city || data.address.town || data.address.village || data.address.state_district || '';
+        const state = data.address.state || '';
+        inputEl.value = city ? `${city}, ${state}` : data.display_name;
+      } else {
+        inputEl.value = `${tempLatitude.toFixed(2)}, ${tempLongitude.toFixed(2)}`;
+      }
+    } catch (err) {
+      inputEl.value = `${tempLatitude.toFixed(2)}, ${tempLongitude.toFixed(2)}`;
+    }
+  }, (error) => {
+    alert('Unable to retrieve your location. Please type manually.');
+    inputEl.value = '';
+  }, { timeout: 10000, enableHighAccuracy: true });
+}
+
+// Escapes special characters to prevent XSS injections in rendered profile cards
+function escapeHTML(str) {
+  return String(str).replace(/[&<>"']/g, function (m) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
+  });
+}
+
+
+/* =========================================================================
+   SECTION 3: NAVIGATION & VIEW SWITCHING MANAGER
+   ========================================================================= */
+
+// Manages visibility across app views (Auth, Onboarding, Quiz, Dashboard, Chat)
 function showSection(sectionId) {
   const sections = ['auth-section', 'profile-section', 'photos-prompt-section', 'quiz-section', 'dashboard-section', 'chat-section'];
   sections.forEach(id => {
@@ -33,6 +105,7 @@ function showSection(sectionId) {
   const menuContainer = document.getElementById('header-menu-container');
   const donateBtn = document.getElementById('header-donate-btn');
   
+  // Toggle header navigation menu & donate button visibility based on dashboard state
   if (menuContainer && donateBtn) {
     const isDashboard = (sectionId === 'dashboard-section' || sectionId === 'chat-section');
     menuContainer.style.display = isDashboard ? 'block' : 'none';
@@ -45,7 +118,13 @@ function showSection(sectionId) {
   }
 }
 
+
+/* =========================================================================
+   SECTION 4: APPLICATION INITIALIZATION & EVENT LISTENERS
+   ========================================================================= */
+
 window.addEventListener('DOMContentLoaded', async () => {
+  // Check active Supabase authentication session on app load
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (session && session.user) {
     currentUser = session.user;
@@ -53,6 +132,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     await checkProfileStatus();
   }
 
+  // Feature: Magic Link Email Authentication Trigger
   const sendBtn = document.getElementById('send-magic-link-btn');
   if (sendBtn) {
     sendBtn.addEventListener('click', async () => {
@@ -80,6 +160,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Feature: Support / Donation Modal Handlers
   const headerDonateBtn = document.getElementById('header-donate-btn');
   const donateModal = document.getElementById('donate-modal');
   const closeDonateModalBtn = document.getElementById('close-donate-modal-btn');
@@ -92,6 +173,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     closeDonateModalBtn.addEventListener('click', () => { donateModal.classList.remove('show'); });
   }
 
+  // Geolocation trigger buttons for signup and profile editing
   const detectLocBtn = document.getElementById('detect-location-btn');
   if (detectLocBtn) {
     detectLocBtn.addEventListener('click', () => { detectUserGeolocation('location'); });
@@ -102,7 +184,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     editDetectLocBtn.addEventListener('click', () => { detectUserGeolocation('edit-location'); });
   }
 
-  // Fixed back button to return to dashboard instead of profile setup form
+  // Navigation action buttons
   const backToProfileBtn = document.getElementById('back-to-profile-btn');
   if (backToProfileBtn) {
     backToProfileBtn.addEventListener('click', async () => { await loadDashboard(); });
@@ -113,6 +195,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     backToQuizBtn.addEventListener('click', async () => { await loadQuestionnaire(false); });
   }
 
+  // Feature: Photo Upload & Storage Management
   const photoInput = document.getElementById('photo-upload-input');
   if (photoInput) {
     photoInput.addEventListener('change', async (e) => {
@@ -131,6 +214,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Save Photos & Prompt setup handler
   const savePhotosPromptBtn = document.getElementById('save-photos-prompt-btn');
   if (savePhotosPromptBtn) {
     savePhotosPromptBtn.addEventListener('click', async () => {
@@ -159,6 +243,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Feature: Questionnaire Submission (Saves personal answers + acceptable partner choices)
   const submitQuizBtn = document.getElementById('submit-quiz-btn');
   if (submitQuizBtn) {
     submitQuizBtn.addEventListener('click', async () => {
@@ -170,7 +255,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       const payload = Object.keys(userAnswersMap).map(qid => ({
         user_id: currentUser.id,
         question_id: parseInt(qid),
-        selected_option_id: userAnswersMap[qid],
+        selected_option_id: userAnswersMap[qid].answer,
+        acceptable_option_ids: userAnswersMap[qid].acceptable,
         weight: 1
       }));
 
@@ -190,6 +276,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Feature: Dashboard Tab Switcher (Discover Feed vs. Connections & Matches)
   const discoverTab = document.getElementById('tab-discover-btn');
   const connectionsTab = document.getElementById('tab-connections-btn');
   const viewDiscover = document.getElementById('view-discover');
@@ -221,6 +308,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Feature: Hamburger Navigation Menu Dropdown
   const menuToggleBtn = document.getElementById('menu-toggle-btn');
   const dropdownMenu = document.getElementById('dropdown-menu');
 
@@ -233,6 +321,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     document.addEventListener('click', () => { dropdownMenu.classList.remove('show'); });
   }
 
+  // Menu Options: Profile Preview, Sign Out, Account Deletion
   const profilePreviewBtn = document.getElementById('menu-profile-preview');
   const signOutBtn = document.getElementById('menu-sign-out');
   const deleteAccountBtn = document.getElementById('menu-delete-account');
@@ -276,6 +365,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Feature: Discovery Preferences Modal Handlers
   const prefModal = document.getElementById('preferences-modal');
   const openPrefBtn = document.getElementById('open-preferences-modal-btn');
   const closePrefBtn = document.getElementById('close-preferences-modal-btn');
@@ -297,6 +387,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Feature: Edit Profile Modal & Photo Management
   const editProfileModal = document.getElementById('edit-profile-modal');
   const closeEditModalBtn = document.getElementById('close-edit-modal-btn');
   const saveEditedProfileBtn = document.getElementById('save-edited-profile-btn');
@@ -369,6 +460,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Feature: Bio / Prompt Comment Note Modal Handlers
   const bioCommentModal = document.getElementById('bio-comment-modal');
   const cancelCommentBtn = document.getElementById('cancel-comment-btn');
   const sendCommentConnectBtn = document.getElementById('send-comment-connect-btn');
@@ -390,6 +482,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Feature: User Reporting Modal Handlers
   const closeReportModalBtn = document.getElementById('close-report-modal-btn');
   const submitReportBtn = document.getElementById('submit-report-btn');
   const reportModal = document.getElementById('report-modal');
@@ -423,6 +516,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Feature: Incoming Like Review Modal Handlers
   const reviewModal = document.getElementById('review-modal');
   const closeReviewModalBtn = document.getElementById('close-review-modal-btn');
   const reviewPassBtn = document.getElementById('review-pass-btn');
@@ -454,14 +548,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  const backToConnectionsBtn = document.getElementById('back-to-connections-btn');
-  if (backToConnectionsBtn) {
-    backToConnectionsBtn.addEventListener('click', async () => {
-      showSection('dashboard-section');
-      await loadConnectionsList();
-    });
-  }
-
+  // Feature: Real-time Chat Messaging Input Handlers
   const sendMessageBtn = document.getElementById('send-message-btn');
   const chatMessageInput = document.getElementById('chat-message-input');
 
@@ -472,6 +559,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Feature: Chat Header Partner Profile & Unmatch Handlers
   const chatHeaderProfileTrigger = document.getElementById('chat-header-profile-trigger');
   const partnerProfileModal = document.getElementById('partner-profile-modal');
   const closePartnerModalBtn = document.getElementById('close-partner-modal-btn');
@@ -494,6 +582,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
+
+/* =========================================================================
+   SECTION 5: PROFILE & ONBOARDING MANAGEMENT
+   ========================================================================= */
+
+// Saves initial profile data during onboarding and initiates questionnaire
 async function triggerSaveProfile() {
   const fullName = document.getElementById('full-name').value.trim();
   const location = document.getElementById('location').value.trim();
@@ -567,54 +661,7 @@ async function triggerSaveProfile() {
   }
 }
 
-function detectUserGeolocation(inputId) {
-  const inputEl = document.getElementById(inputId);
-  if (!navigator.geolocation) {
-    alert('Geolocation is not supported by your browser');
-    return;
-  }
-
-  inputEl.value = 'Detecting GPS location...';
-
-  navigator.geolocation.getCurrentPosition(async (position) => {
-    tempLatitude = position.coords.latitude;
-    tempLongitude = position.coords.longitude;
-
-    try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${tempLatitude}&lon=${tempLongitude}`);
-      const data = await response.json();
-      
-      if (data && data.address) {
-        const city = data.address.city || data.address.town || data.address.village || data.address.state_district || '';
-        const state = data.address.state || '';
-        inputEl.value = city ? `${city}, ${state}` : data.display_name;
-      } else {
-        inputEl.value = `${tempLatitude.toFixed(2)}, ${tempLongitude.toFixed(2)}`;
-      }
-    } catch (err) {
-      inputEl.value = `${tempLatitude.toFixed(2)}, ${tempLongitude.toFixed(2)}`;
-    }
-  }, (error) => {
-    alert('Unable to retrieve your location. Please type manually.');
-    inputEl.value = '';
-  }, { timeout: 10000, enableHighAccuracy: true });
-}
-
-function calculateDistance(lat1, lon1, lat2, lon2) {
-  if (!lat1 || !lon1 || !lat2 || !lon2) return 99999;
-  const R = 6371;
-  const dLat = deg2rad(lat2 - lat1);
-  const dLon = deg2rad(lon2 - lon1);
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2); 
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-  return R * c;
-}
-
-function deg2rad(deg) { return deg * (Math.PI/180); }
-
+// Uploads images to Supabase storage bucket and returns public URLs
 async function uploadImagesToSupabase(file, previewContainerId, isEditMode = false) {
   const previewContainer = document.getElementById(previewContainerId);
   if (!file) return null;
@@ -645,6 +692,7 @@ async function uploadImagesToSupabase(file, previewContainerId, isEditMode = fal
   return null;
 }
 
+// Renders interactive photo thumbnails inside the edit profile modal
 function renderEditPhotoThumbnails() {
   const preview = document.getElementById('edit-photo-preview');
   preview.innerHTML = '';
@@ -675,13 +723,7 @@ function updatePhotoCountIndicator() {
   }
 }
 
-supabaseClient.auth.onAuthStateChange(async (event, session) => {
-  if (session && session.user) {
-    currentUser = session.user;
-    await checkProfileStatus();
-  }
-});
-
+// Automatically monitors and routes user based on profile setup completion status
 async function checkProfileStatus() {
   if (!currentUser) return;
   const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
@@ -701,6 +743,12 @@ async function checkProfileStatus() {
   }
 }
 
+
+/* =========================================================================
+   SECTION 6: QUESTIONNAIRE ENGINE (Personal Answer & Acceptable Partner Choices)
+   ========================================================================= */
+
+// Loads either onboarding or deep-dive questionnaire questions with acceptable partner option pickers
 async function loadQuestionnaire(isDeepDive = false) {
   showSection('quiz-section');
   const container = document.getElementById('quiz-container');
@@ -717,7 +765,7 @@ async function loadQuestionnaire(isDeepDive = false) {
 
   let { data: questions, error } = await query.order('id', { ascending: true });
 
-  // Fallback: if deep dive query returns nothing, load all questions so it never says "Unable to load questions"
+  // Fallback: if deep dive query returns nothing, load all questions to prevent load errors
   if ((error || !questions || !questions.length) && isDeepDive) {
     const fallbackQuery = await supabaseClient.from('questions').select('*').order('id', { ascending: true });
     questions = fallbackQuery.data;
@@ -733,25 +781,91 @@ async function loadQuestionnaire(isDeepDive = false) {
   container.innerHTML = isDeepDive ? '<h3 style="color:var(--primary); margin-bottom:12px;">Deep-Dive Profile Questionnaire</h3>' : '';
 
   questions.forEach((q, idx) => {
+    if (!userAnswersMap[q.id]) {
+      userAnswersMap[q.id] = { answer: null, acceptable: [] };
+    }
+
     const card = document.createElement('div');
     card.className = 'question-card';
-    let optionsHTML = '';
+    card.style.marginBottom = '20px';
+    card.style.padding = '16px';
+    card.style.background = '#fff';
+    card.style.borderRadius = '12px';
+    card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
+
+    // Render personal single-select option buttons
+    let ownOptionsHTML = '';
     q.options.forEach(opt => {
-      const isSelected = userAnswersMap[q.id] === opt.id ? 'selected' : '';
-      optionsHTML += `<button type="button" class="option-btn ${isSelected}" data-qid="${q.id}" data-optid="${opt.id}">${opt.label}</button>`;
+      const isSelected = userAnswersMap[q.id].answer === opt.id ? 'selected' : '';
+      ownOptionsHTML += `<button type="button" class="option-btn ${isSelected}" data-qid="${q.id}" data-optid="${opt.id}">${opt.label}</button>`;
     });
-    card.innerHTML = `<span class="badge">${q.category || 'Lifestyle'}</span><p style="font-weight: 600; font-size: 0.95rem; margin-bottom: 10px;">${idx + 1}. ${q.question_text}</p><div>${optionsHTML}</div>`;
+
+    // Render multi-select checkboxes for acceptable partner answers
+    let acceptableOptionsHTML = '';
+    q.options.forEach(opt => {
+      const isChecked = userAnswersMap[q.id].acceptable.includes(opt.id) ? 'checked' : '';
+      acceptableOptionsHTML += `
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-main); margin-top: 6px; cursor: pointer;">
+          <input type="checkbox" class="acceptable-chk" data-qid="${q.id}" data-optid="${opt.id}" ${isChecked} style="accent-color: var(--primary);" />
+          ${opt.label}
+        </label>
+      `;
+    });
+
+    card.innerHTML = `
+      <span class="badge" style="font-size: 0.7rem; background: var(--primary-light); color: var(--primary); padding: 3px 8px; border-radius: 4px; font-weight: 600;">${q.category || 'Lifestyle'}</span>
+      <p style="font-weight: 600; font-size: 0.95rem; margin: 8px 0 12px 0; color: var(--text-main);">${idx + 1}. ${q.question_text}</p>
+      
+      <div style="margin-bottom: 14px;">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Your Answer:</div>
+        <div>${ownOptionsHTML}</div>
+      </div>
+
+      <div style="background: #faf7f5; padding: 10px 12px; border-radius: 8px; border-left: 3px solid var(--primary);">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--primary); text-transform: uppercase; margin-bottom: 4px;">Acceptable answers from your match:</div>
+        <div>${acceptableOptionsHTML}</div>
+      </div>
+    `;
     container.appendChild(card);
   });
 
+  // Event listener for user's own answer selection
   document.querySelectorAll('.option-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const qid = e.target.getAttribute('data-qid');
       const optid = e.target.getAttribute('data-optid');
       document.querySelectorAll(`.option-btn[data-qid="${qid}"]`).forEach(b => b.classList.remove('selected'));
       e.target.classList.add('selected');
-      userAnswersMap[qid] = optid;
+      
+      if (!userAnswersMap[qid]) userAnswersMap[qid] = { answer: null, acceptable: [] };
+      userAnswersMap[qid].answer = optid;
+      
+      // Automatically include own answer in acceptable list by default if empty
+      if (userAnswersMap[qid].acceptable.length === 0) {
+        userAnswersMap[qid].acceptable.push(optid);
+        const matchingChk = document.querySelector(`.acceptable-chk[data-qid="${qid}"][data-optid="${optid}"]`);
+        if (matchingChk) matchingChk.checked = true;
+      }
+
       updateQuizSubmitButtonState();
+    });
+  });
+
+  // Event listener for acceptable partner options checkboxes
+  document.querySelectorAll('.acceptable-chk').forEach(chk => {
+    chk.addEventListener('change', (e) => {
+      const qid = e.target.getAttribute('data-qid');
+      const optid = e.target.getAttribute('data-optid');
+      
+      if (!userAnswersMap[qid]) userAnswersMap[qid] = { answer: null, acceptable: [] };
+      
+      if (e.target.checked) {
+        if (!userAnswersMap[qid].acceptable.includes(optid)) {
+          userAnswersMap[qid].acceptable.push(optid);
+        }
+      } else {
+        userAnswersMap[qid].acceptable = userAnswersMap[qid].acceptable.filter(id => id !== optid);
+      }
     });
   });
 
@@ -762,7 +876,7 @@ function updateQuizSubmitButtonState() {
   const submitBtn = document.getElementById('submit-quiz-btn');
   if (!submitBtn) return;
 
-  const answeredCount = Object.keys(userAnswersMap).filter(qid => quizQuestions.some(q => q.id == qid)).length;
+  const answeredCount = Object.keys(userAnswersMap).filter(qid => userAnswersMap[qid] && userAnswersMap[qid].answer !== null).length;
   const totalCount = quizQuestions.length;
 
   submitBtn.style.display = 'block';
@@ -779,6 +893,12 @@ function updateQuizSubmitButtonState() {
   }
 }
 
+
+/* =========================================================================
+   SECTION 7: DASHBOARD, DISCOVERY FEED & ADVANCED MATCHING ALGORITHM
+   ========================================================================= */
+
+// Loads discovery feed, applies gender/intent filters, and calculates reciprocal match scores
 async function loadDashboard() {
   showSection('dashboard-section');
   const deckContainer = document.getElementById('deck-container');
@@ -797,14 +917,20 @@ async function loadDashboard() {
   const preferredGenders = myProfile?.preferred_genders || ['Man', 'Woman', 'Non-binary', 'Other'];
   const preferredIntents = myProfile?.preferred_intents || ['both', 'platonic', 'romantic'];
 
+  // Fetch current user's answers and acceptable choices for matching
   const { data: myAnswers } = await supabaseClient
     .from('user_answers')
-    .select('question_id, selected_option_id')
+    .select('question_id, selected_option_id, acceptable_option_ids')
     .eq('user_id', currentUser.id);
 
   const myAnswersLookup = {};
   if (myAnswers) {
-    myAnswers.forEach(a => { myAnswersLookup[a.question_id] = a.selected_option_id; });
+    myAnswers.forEach(a => { 
+      myAnswersLookup[a.question_id] = {
+        answer: a.selected_option_id,
+        acceptable: a.acceptable_option_ids || [a.selected_option_id]
+      }; 
+    });
   }
 
   const { data: existingConnections } = await supabaseClient
@@ -843,15 +969,23 @@ async function loadDashboard() {
     return;
   }
 
-  const { data: allAnswers } = await supabaseClient.from('user_answers').select('user_id, question_id, selected_option_id');
+  // Fetch all user answers and acceptable option arrays to compute compatibility scores
+  const { data: allAnswers } = await supabaseClient.from('user_answers').select('user_id, question_id, selected_option_id, acceptable_option_ids');
+  
   const profilesAnswersMap = {};
+  const profilesAcceptableMap = {};
+
   if (allAnswers) {
     allAnswers.forEach(ans => {
       if (!profilesAnswersMap[ans.user_id]) profilesAnswersMap[ans.user_id] = {};
+      if (!profilesAcceptableMap[ans.user_id]) profilesAcceptableMap[ans.user_id] = {};
+      
       profilesAnswersMap[ans.user_id][ans.question_id] = ans.selected_option_id;
+      profilesAcceptableMap[ans.user_id][ans.question_id] = ans.acceptable_option_ids || [ans.selected_option_id];
     });
   }
 
+  // Filter profiles based on gender and relationship intent preferences
   let filteredProfiles = profiles.filter(p => {
     if (excludedUserIds.has(p.id)) return false;
 
@@ -864,24 +998,36 @@ async function loadDashboard() {
     return true;
   });
 
+  // Calculate reciprocal match scores based on mutual acceptable options
   filteredProfiles = filteredProfiles.map(p => {
     let score = 75;
     const targetAnswers = profilesAnswersMap[p.id] || {};
-    let matchedQuestions = 0;
+    const targetAcceptable = profilesAcceptableMap[p.id] || {};
+    
+    let mutuallyCompatibleCount = 0;
     let totalCompared = 0;
 
     Object.keys(myAnswersLookup).forEach(qid => {
-      if (targetAnswers[qid] !== undefined) {
+      const myAns = myAnswersLookup[qid]?.answer;
+      const myAcceptable = myAnswersLookup[qid]?.acceptable || [myAns];
+      
+      const theirAns = targetAnswers[qid];
+      const theirAcceptable = targetAcceptable[qid] || [theirAns];
+
+      if (myAns !== undefined && theirAns !== undefined) {
         totalCompared++;
-        if (myAnswersLookup[qid] === targetAnswers[qid]) {
-          matchedQuestions++;
+        const iAcceptThem = myAcceptable.includes(theirAns);
+        const theyAcceptMe = theirAcceptable.includes(myAns);
+
+        if (iAcceptThem && theyAcceptMe) {
+          mutuallyCompatibleCount++;
         }
       }
     });
 
     if (totalCompared > 0) {
-      const quizMatchRatio = matchedQuestions / totalCompared;
-      score = Math.floor(60 + (quizMatchRatio * 35));
+      const compatibilityRatio = mutuallyCompatibleCount / totalCompared;
+      score = Math.floor(50 + (compatibilityRatio * 49));
     }
 
     const distance = calculateDistance(myLat, myLon, p.latitude, p.longitude);
@@ -889,6 +1035,7 @@ async function loadDashboard() {
     return { ...p, matchScore: Math.min(score, 99), distanceKm: distance };
   });
 
+  // Sort profiles by highest match score, then closest distance
   filteredProfiles.sort((a, b) => {
     if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
     return a.distanceKm - b.distanceKm;
@@ -941,6 +1088,7 @@ async function checkForUnreadMessages() {
   }
 }
 
+// Bumble-Style Continuous Scroll Feed Renderer
 function renderDeck() {
   const deckContainer = document.getElementById('deck-container');
   deckContainer.innerHTML = '';
@@ -1241,6 +1389,12 @@ async function handleLeftSwipe(targetProfile) {
     ], { onConflict: 'requester_id,receiver_id' });
 }
 
+
+/* =========================================================================
+   SECTION 8: CONNECTIONS, CHAT & MESSAGING SYSTEM
+   ========================================================================= */
+
+// Loads accepted matches and pending connection requests
 async function loadConnectionsList() {
   const acceptedContainer = document.getElementById('accepted-matches-container');
   const pendingContainer = document.getElementById('pending-matches-container');
@@ -1423,6 +1577,12 @@ async function sendChatMessage() {
   }
 }
 
+
+/* =========================================================================
+   SECTION 9: PROFILE MODALS, EDITING, REPORTING & ACCOUNT MANAGEMENT
+   ========================================================================= */
+
+// Displays current user profile preview modal with button to trigger deep-dive questionnaire
 async function showProfilePreview() {
   const modal = document.getElementById('profile-modal');
   const detailsEl = document.getElementById('modal-profile-details');
@@ -1605,10 +1765,4 @@ async function deleteUserAccount() {
   userAnswersMap = {};
   showSection('auth-section');
   alert('Your account data has been deleted.');
-}
-
-function escapeHTML(str) {
-  return String(str).replace(/[&<>"']/g, function (m) {
-    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
-  });
 }
