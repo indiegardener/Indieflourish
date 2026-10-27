@@ -46,20 +46,11 @@ function showSection(sectionId) {
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
-  const hash = window.location.hash;
-  if (hash && (hash.includes('access_token') || hash.includes('type=signup') || hash.includes('type=magiclink'))) {
-    const { data } = await supabaseClient.auth.getSessionFromUrl({ url: window.location.href });
-    if (data && data.session) {
-      currentUser = data.session.user;
-      window.history.replaceState({}, document.title, window.location.pathname);
-      await checkProfileStatus();
-      return;
-    }
-  }
-
-  const { data: { session } } = await supabaseClient.auth.getSession();
+  // Fixed Auth Session Handling for Supabase v2
+  const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
   if (session && session.user) {
     currentUser = session.user;
+    window.history.replaceState({}, document.title, window.location.pathname);
     await checkProfileStatus();
   }
 
@@ -188,7 +179,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (error) {
         alert('Error saving answers: ' + error.message);
       } else {
-        // If answering deep dive questionnaire from profile, return to dashboard
         const { data: profile } = await supabaseClient.from('profiles').select('images').eq('id', currentUser.id).single();
         if (profile && profile.images && profile.images.length > 0) {
           alert('Questionnaire responses saved successfully!');
@@ -286,7 +276,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Preferences Modal Event Listeners
   const prefModal = document.getElementById('preferences-modal');
   const openPrefBtn = document.getElementById('open-preferences-modal-btn');
   const closePrefBtn = document.getElementById('close-preferences-modal-btn');
@@ -574,7 +563,7 @@ async function triggerSaveProfile() {
   if (error) {
     alert('Error saving profile: ' + error.message);
   } else {
-    await loadQuestionnaire(false); // Initial 10 questions only
+    await loadQuestionnaire(false);
   }
 }
 
@@ -790,7 +779,6 @@ async function loadDashboard() {
 
   deckContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding-top: 100px;">Finding nearby profiles...</p>';
 
-  // Fetch current user's profile preferences & location
   const { data: myProfile } = await supabaseClient
     .from('profiles')
     .select('*')
@@ -802,7 +790,6 @@ async function loadDashboard() {
   const preferredGenders = myProfile?.preferred_genders || ['Man', 'Woman', 'Non-binary', 'Other'];
   const preferredIntents = myProfile?.preferred_intents || ['both', 'platonic', 'romantic'];
 
-  // Fetch current user's quiz answers for compatibility matching
   const { data: myAnswers } = await supabaseClient
     .from('user_answers')
     .select('question_id, selected_option_id')
@@ -849,7 +836,6 @@ async function loadDashboard() {
     return;
   }
 
-  // Fetch all user answers to compute deep compatibility scores
   const { data: allAnswers } = await supabaseClient.from('user_answers').select('user_id, question_id, selected_option_id');
   const profilesAnswersMap = {};
   if (allAnswers) {
@@ -859,24 +845,20 @@ async function loadDashboard() {
     });
   }
 
-  // Filter based on Excluded status, Gender preferences, and Intent preferences
   let filteredProfiles = profiles.filter(p => {
     if (excludedUserIds.has(p.id)) return false;
 
-    // Gender filter check
     const pGender = p.gender || 'Other';
     if (preferredGenders.length > 0 && !preferredGenders.includes(pGender)) return false;
 
-    // Intent filter check
     const pIntent = p.intent || 'both';
     if (preferredIntents.length > 0 && !preferredIntents.includes(pIntent) && pIntent !== 'both') return false;
 
     return true;
   });
 
-  // Calculate advanced match score combining quiz overlap + profile orientation/intent factors + proximity
   filteredProfiles = filteredProfiles.map(p => {
-    let score = 75; // Base score
+    let score = 75;
     const targetAnswers = profilesAnswersMap[p.id] || {};
     let matchedQuestions = 0;
     let totalCompared = 0;
@@ -895,13 +877,11 @@ async function loadDashboard() {
       score = Math.floor(60 + (quizMatchRatio * 35));
     }
 
-    // Proximity adjustment
     const distance = calculateDistance(myLat, myLon, p.latitude, p.longitude);
 
-    return { ...profileDataWithComputedScore: p, matchScore: Math.min(score, 99), distanceKm: distance };
+    return { ...p, matchScore: Math.min(score, 99), distanceKm: distance };
   });
 
-  // Sort by highest match score, then closest distance
   filteredProfiles.sort((a, b) => {
     if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
     return a.distanceKm - b.distanceKm;
@@ -954,7 +934,6 @@ async function checkForUnreadMessages() {
   }
 }
 
-// Bumble-Style Continuous Scroll Feed Renderer
 function renderDeck() {
   const deckContainer = document.getElementById('deck-container');
   deckContainer.innerHTML = '';
@@ -1471,7 +1450,7 @@ async function showProfilePreview() {
     document.getElementById('complete-deep-dive-btn').addEventListener('click', async () => {
       modal.classList.remove('show');
       userAnswersMap = {};
-      await loadQuestionnaire(true); // Load deep dive questions only
+      await loadQuestionnaire(true);
     });
   } else {
     detailsEl.innerHTML = 'Profile not found.';
