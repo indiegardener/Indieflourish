@@ -161,6 +161,11 @@ window.addEventListener('DOMContentLoaded', async () => {
       if (error) {
         alert('Error saving photos/prompt: ' + error.message);
       } else {
+        if (window.gtag) {
+          gtag('event', 'profile_completed', {
+            photo_count: uploadedImageUrlsTemp.length
+          });
+        }
         await loadDashboard();
       }
     });
@@ -1026,6 +1031,11 @@ async function handleRightSwipeWithNote(targetProfile, noteText) {
       await supabaseClient.from('messages').insert([
         { connection_id: incomingRequest.id, sender_id: currentUser.id, message_text: `Note: ${noteText}` }
       ]);
+      
+      if (window.gtag) {
+        gtag('event', 'match_created', { method: 'note_connect' });
+      }
+
       alert(`🎉 It's a Match! Your note was sent and your chat is now open.`);
       await updateActiveChatCount();
     }
@@ -1042,6 +1052,10 @@ async function handleRightSwipeWithNote(targetProfile, noteText) {
       await supabaseClient.from('messages').insert([
         { connection_id: newConn.id, sender_id: currentUser.id, message_text: `Note: ${noteText}` }
       ]);
+
+      if (window.gtag) {
+        gtag('event', 'connection_requested', { method: 'note_connect' });
+      }
     }
     alert('Your note and connection request have been sent!');
   }
@@ -1080,15 +1094,22 @@ async function handleRightSwipe(targetProfile) {
       .eq('id', incomingRequest.id);
 
     if (!error) {
+      if (window.gtag) {
+        gtag('event', 'match_created', { method: 'swipe_right' });
+      }
       alert(`🎉 It's a Match! You and ${targetProfile.full_name} have both swiped right. Your active chat space is open!`);
       await updateActiveChatCount();
     }
   } else {
-    await supabaseClient
+    const { error } = await supabaseClient
       .from('connections')
       .upsert([
         { requester_id: currentUser.id, receiver_id: targetProfile.id, status: 'pending' }
       ], { onConflict: 'requester_id,receiver_id' });
+
+    if (!error && window.gtag) {
+      gtag('event', 'connection_requested', { method: 'swipe_right' });
+    }
   }
 }
 
