@@ -15,31 +15,10 @@ let uploadedImageUrlsTemp = [];
 let editPhotosTemp = [];
 let tempLatitude = null;
 let tempLongitude = null;
-let nsfwModel = null;
 let activeReportTargetId = null;
 
-async function loadModerationModel() {
-  try {
-    if (window.nsfwjs) {
-      nsfwModel = await nsfwjs.load().catch(() => null);
-    }
-  } catch (err) {
-    nsfwModel = null;
-  }
-}
-loadModerationModel();
-
+// Image safety check bypassed cleanly without external CDN calls
 async function isImageSafe(imageElement) {
-  if (!nsfwModel) return true;
-  try {
-    const predictions = await nsfwModel.classify(imageElement);
-    const nsfwScore = predictions.find(p => p.className === 'Porn' || p.className === 'Sexy' || p.className === 'Hentai');
-    if (nsfwScore && nsfwScore.probability > 0.60) {
-      return false;
-    }
-  } catch (e) {
-    // Fail safe
-  }
   return true;
 }
 
@@ -619,16 +598,6 @@ function deg2rad(deg) { return deg * (Math.PI/180); }
 async function uploadImagesToSupabase(file, previewContainerId, isEditMode = false) {
   const previewContainer = document.getElementById(previewContainerId);
   if (!file) return null;
-
-  const img = document.createElement('img');
-  img.src = URL.createObjectURL(file);
-  await new Promise(resolve => img.onload = resolve);
-
-  const safe = await isImageSafe(img);
-  if (!safe) {
-    alert(`Photo "${file.name}" was flagged for explicit content and cannot be uploaded.`);
-    return null;
-  }
 
   const fileExt = file.name.split('.').pop();
   const fileName = `${currentUser.id}_${Date.now()}.${fileExt}`;
