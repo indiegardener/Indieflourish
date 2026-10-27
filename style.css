@@ -390,7 +390,25 @@ button:hover { background-color: #233a30; }
 .comment-bio-btn:hover {
   background: var(--primary-light);
 }
+/* --- Insert around line 350+ in style.css --- */
+.card-details-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0;
+}
 
+.detail-tag {
+  background: #f4f2ee;
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+}
 .card-intent {
   font-size: 0.85rem;
   color: var(--text-muted);
