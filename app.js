@@ -1,11 +1,13 @@
 /* =========================================================================
    SECTION 1: CONSTANTS & GLOBAL STATE VARIABLES
    ========================================================================= */
+
+// SECTION 1.a: Supabase Client Initialization & Environment Config
 const SUPABASE_URL = 'https://wzfhgkwivhftxdjtzapx.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6Zmhna3dpdmhmdHhkanR6YXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NTk0ODUsImV4cCI6MjEwODQzNTQ4NX0.HV12dnA-56Lm8D7UDzuoSw2cT9Nak8wBnHZoqAPgXBE';
-
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// SECTION 1.b: Global Application State Variables
 let currentUser = null;
 let quizQuestions = [];
 let userAnswersMap = {}; // Stores { answer: 'opt_id', acceptable: ['opt_id_1', ...] }
@@ -22,15 +24,15 @@ let activeReportTargetId = null;
 
 
 /* =========================================================================
-   SECTION 2: UTILITY & HELPER FUNCTIONS (Image Safety, Geolocation, Math)
+   SECTION 2: UTILITY & HELPER FUNCTIONS
    ========================================================================= */
 
-// Bypasses external AI moderation CDN calls cleanly to avoid console errors
+// SECTION 2.a: Image Safety & Moderation Stubs
 async function isImageSafe(imageElement) {
   return true;
 }
 
-// Calculates geographic distance in kilometers between two GPS coordinates
+// SECTION 2.b: Geolocation & Distance Calculation
 function calculateDistance(lat1, lon1, lat2, lon2) {
   if (!lat1 || !lon1 || !lat2 || !lon2) return 99999;
   const R = 6371;
@@ -43,23 +45,18 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
   return R * c;
 }
-
 function deg2rad(deg) { return deg * (Math.PI/180); }
 
-// Automatically fetches and reverse-geocodes user browser GPS coordinates via Nominatim
 function detectUserGeolocation(inputId) {
   const inputEl = document.getElementById(inputId);
   if (!navigator.geolocation) {
     alert('Geolocation is not supported by your browser');
     return;
   }
-
   inputEl.value = 'Detecting GPS location...';
-
   navigator.geolocation.getCurrentPosition(async (position) => {
     tempLatitude = position.coords.latitude;
     tempLongitude = position.coords.longitude;
-
     try {
       const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${tempLatitude}&lon=${tempLongitude}`);
       const data = await response.json();
@@ -80,7 +77,7 @@ function detectUserGeolocation(inputId) {
   }, { timeout: 10000, enableHighAccuracy: true });
 }
 
-// Escapes special characters to prevent XSS injections in rendered profile cards
+// SECTION 2.c: Security & HTML Escaping
 function escapeHTML(str) {
   return String(str).replace(/[&<>"']/g, function (m) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
@@ -92,7 +89,7 @@ function escapeHTML(str) {
    SECTION 3: NAVIGATION & VIEW SWITCHING MANAGER
    ========================================================================= */
 
-// Manages visibility across app views (Auth, Onboarding, Quiz, Dashboard, Chat)
+// SECTION 3.a: View State Controller
 function showSection(sectionId) {
   const sections = ['auth-section', 'profile-section', 'photos-prompt-section', 'quiz-section', 'dashboard-section', 'chat-section'];
   sections.forEach(id => {
@@ -101,17 +98,14 @@ function showSection(sectionId) {
   });
   const activeEl = document.getElementById(sectionId);
   if (activeEl) activeEl.classList.add('active');
-
   const menuContainer = document.getElementById('header-menu-container');
   const donateBtn = document.getElementById('header-donate-btn');
   
-  // Toggle header navigation menu & donate button visibility based on dashboard state
   if (menuContainer && donateBtn) {
     const isDashboard = (sectionId === 'dashboard-section' || sectionId === 'chat-section');
     menuContainer.style.display = isDashboard ? 'block' : 'none';
     donateBtn.style.display = isDashboard ? 'inline-block' : 'none';
   }
-
   const actionBar = document.getElementById('sticky-action-bar');
   if (actionBar) {
     actionBar.style.display = (sectionId === 'dashboard-section' && document.getElementById('view-discover').style.display !== 'none' && currentCardIndex < availableProfiles.length) ? 'flex' : 'none';
@@ -124,34 +118,29 @@ function showSection(sectionId) {
    ========================================================================= */
 
 window.addEventListener('DOMContentLoaded', async () => {
-  // Check active Supabase authentication session on app load
+  // SECTION 4.a: Session Check & Magic Link Auth Handlers
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (session && session.user) {
     currentUser = session.user;
     window.history.replaceState({}, document.title, window.location.pathname);
     await checkProfileStatus();
   }
-
-  // Feature: Magic Link Email Authentication Trigger
+  
   const sendBtn = document.getElementById('send-magic-link-btn');
   if (sendBtn) {
     sendBtn.addEventListener('click', async () => {
       const emailInput = document.getElementById('email-input');
       const statusEl = document.getElementById('auth-status');
       const email = emailInput ? emailInput.value.trim() : '';
-
       if (!email) {
         if (statusEl) statusEl.textContent = 'Please enter a valid email address.';
         return;
       }
-
       if (statusEl) statusEl.textContent = 'Sending verification link...';
-
       const { error } = await supabaseClient.auth.signInWithOtp({
         email: email,
         options: { emailRedirectTo: window.location.origin }
       });
-
       if (error) {
         if (statusEl) statusEl.textContent = 'Error: ' + error.message;
       } else {
@@ -160,42 +149,36 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Feature: Support / Donation Modal Handlers
+  // SECTION 4.b: Global Modals, Geolocation Triggers & Navigation Listeners
   const headerDonateBtn = document.getElementById('header-donate-btn');
   const donateModal = document.getElementById('donate-modal');
   const closeDonateModalBtn = document.getElementById('close-donate-modal-btn');
-
   if (headerDonateBtn && donateModal) {
     headerDonateBtn.addEventListener('click', () => { donateModal.classList.add('show'); });
   }
-
   if (closeDonateModalBtn && donateModal) {
     closeDonateModalBtn.addEventListener('click', () => { donateModal.classList.remove('show'); });
   }
 
-  // Geolocation trigger buttons for signup and profile editing
   const detectLocBtn = document.getElementById('detect-location-btn');
   if (detectLocBtn) {
     detectLocBtn.addEventListener('click', () => { detectUserGeolocation('location'); });
   }
-
   const editDetectLocBtn = document.getElementById('edit-detect-location-btn');
   if (editDetectLocBtn) {
     editDetectLocBtn.addEventListener('click', () => { detectUserGeolocation('edit-location'); });
   }
 
-  // Navigation action buttons
   const backToProfileBtn = document.getElementById('back-to-profile-btn');
   if (backToProfileBtn) {
     backToProfileBtn.addEventListener('click', async () => { await loadDashboard(); });
   }
-
   const backToQuizBtn = document.getElementById('back-to-quiz-btn');
   if (backToQuizBtn) {
     backToQuizBtn.addEventListener('click', async () => { await loadQuestionnaire(false); });
   }
 
-  // Feature: Photo Upload & Storage Management
+  // SECTION 4.c: Questionnaire, Feed, Chat, and Modal Action Listeners
   const photoInput = document.getElementById('photo-upload-input');
   if (photoInput) {
     photoInput.addEventListener('change', async (e) => {
@@ -214,7 +197,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Save Photos & Prompt setup handler
   const savePhotosPromptBtn = document.getElementById('save-photos-prompt-btn');
   if (savePhotosPromptBtn) {
     savePhotosPromptBtn.addEventListener('click', async () => {
@@ -222,16 +204,13 @@ window.addEventListener('DOMContentLoaded', async () => {
         alert('Please upload at least 1 photo before completing setup.');
         return;
       }
-
       const promptQ = document.getElementById('setup-prompt-q').value;
       const promptA = document.getElementById('setup-prompt-a').value.trim();
-
       const { error } = await supabaseClient.from('profiles').update({
         images: uploadedImageUrlsTemp,
         prompt_question: promptQ,
         prompt_answer: promptA
       }).eq('id', currentUser.id);
-
       if (error) {
         alert('Error saving photos/prompt: ' + error.message);
       } else {
@@ -243,7 +222,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Feature: Questionnaire Submission (Saves personal answers + acceptable partner choices)
   const submitQuizBtn = document.getElementById('submit-quiz-btn');
   if (submitQuizBtn) {
     submitQuizBtn.addEventListener('click', async () => {
@@ -251,7 +229,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         const { data: { session } } = await supabaseClient.auth.getSession();
         if (session) currentUser = session.user;
       }
-
       const payload = Object.keys(userAnswersMap).map(qid => ({
         user_id: currentUser.id,
         question_id: parseInt(qid),
@@ -259,9 +236,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         acceptable_option_ids: userAnswersMap[qid].acceptable,
         weight: 1
       }));
-
       const { error } = await supabaseClient.from('user_answers').upsert(payload, { onConflict: 'user_id,question_id' });
-
       if (error) {
         alert('Error saving answers: ' + error.message);
       } else {
@@ -276,12 +251,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Feature: Dashboard Tab Switcher (Discover Feed vs. Connections & Matches)
   const discoverTab = document.getElementById('tab-discover-btn');
   const connectionsTab = document.getElementById('tab-connections-btn');
   const viewDiscover = document.getElementById('view-discover');
   const viewConnections = document.getElementById('view-connections');
-
   if (discoverTab && connectionsTab) {
     discoverTab.addEventListener('click', () => {
       discoverTab.classList.add('active');
@@ -293,7 +266,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         actionbar.style.display = 'flex';
       }
     });
-
     connectionsTab.addEventListener('click', async () => {
       connectionsTab.classList.add('active');
       discoverTab.classList.remove('active');
@@ -301,41 +273,34 @@ window.addEventListener('DOMContentLoaded', async () => {
       viewConnections.style.display = 'flex';
       const actionbar = document.getElementById('sticky-action-bar');
       if (actionbar) actionbar.style.display = 'none';
-
       const unreadDot = document.getElementById('unread-dot');
       if (unreadDot) unreadDot.style.display = 'none';
       await loadConnectionsList();
     });
   }
 
-  // Feature: Hamburger Navigation Menu Dropdown
   const menuToggleBtn = document.getElementById('menu-toggle-btn');
   const dropdownMenu = document.getElementById('dropdown-menu');
-
   if (menuToggleBtn && dropdownMenu) {
     menuToggleBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       dropdownMenu.classList.toggle('show');
     });
-
     document.addEventListener('click', () => { dropdownMenu.classList.remove('show'); });
   }
 
-  // Menu Options: Profile Preview, Sign Out, Account Deletion
   const profilePreviewBtn = document.getElementById('menu-profile-preview');
   const signOutBtn = document.getElementById('menu-sign-out');
   const deleteAccountBtn = document.getElementById('menu-delete-account');
   const profileModal = document.getElementById('profile-modal');
   const closeModalBtn = document.getElementById('close-modal-btn');
   const editProfileBtn = document.getElementById('edit-profile-btn');
-
   if (profilePreviewBtn) {
     profilePreviewBtn.addEventListener('click', async () => {
       dropdownMenu.classList.remove('show');
       await showProfilePreview();
     });
   }
-
   if (signOutBtn) {
     signOutBtn.addEventListener('click', async () => {
       await supabaseClient.auth.signOut();
@@ -344,7 +309,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       showSection('auth-section');
     });
   }
-
   if (deleteAccountBtn) {
     deleteAccountBtn.addEventListener('click', async () => {
       dropdownMenu.classList.remove('show');
@@ -353,11 +317,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
     });
   }
-
   if (closeModalBtn && profileModal) {
     closeModalBtn.addEventListener('click', () => { profileModal.classList.remove('show'); });
   }
-
   if (editProfileBtn) {
     editProfileBtn.addEventListener('click', async () => {
       profileModal.classList.remove('show');
@@ -365,34 +327,24 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Feature: Discovery Preferences Modal Handlers
   const prefModal = document.getElementById('preferences-modal');
   const openPrefBtn = document.getElementById('open-preferences-modal-btn');
   const closePrefBtn = document.getElementById('close-preferences-modal-btn');
   const savePrefBtn = document.getElementById('save-preferences-btn');
-
   if (openPrefBtn && prefModal) {
-    openPrefBtn.addEventListener('click', async () => {
-      await openPreferencesModal();
-    });
+    openPrefBtn.addEventListener('click', async () => { await openPreferencesModal(); });
   }
-
   if (closePrefBtn && prefModal) {
     closePrefBtn.addEventListener('click', () => { prefModal.classList.remove('show'); });
   }
-
   if (savePrefBtn) {
-    savePrefBtn.addEventListener('click', async () => {
-      await saveUserPreferences();
-    });
+    savePrefBtn.addEventListener('click', async () => { await saveUserPreferences(); });
   }
 
-  // Feature: Edit Profile Modal & Photo Management
   const editProfileModal = document.getElementById('edit-profile-modal');
   const closeEditModalBtn = document.getElementById('close-edit-modal-btn');
   const saveEditedProfileBtn = document.getElementById('save-edited-profile-btn');
   const editPhotoInput = document.getElementById('edit-photo-input');
-
   if (editPhotoInput) {
     editPhotoInput.addEventListener('change', async (e) => {
       const file = e.target.files[0];
@@ -410,11 +362,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       editPhotoInput.value = '';
     });
   }
-
   if (closeEditModalBtn && editProfileModal) {
     closeEditModalBtn.addEventListener('click', () => { editProfileModal.classList.remove('show'); });
   }
-
   if (saveEditedProfileBtn) {
     saveEditedProfileBtn.addEventListener('click', async () => {
       const updatePayload = {
@@ -442,14 +392,11 @@ window.addEventListener('DOMContentLoaded', async () => {
         images: editPhotosTemp,
         updated_at: new Date().toISOString()
       };
-
       if (tempLatitude !== null && tempLongitude !== null) {
         updatePayload.latitude = tempLatitude;
         updatePayload.longitude = tempLongitude;
       }
-
       const { error } = await supabaseClient.from('profiles').update(updatePayload).eq('id', currentUser.id);
-
       if (error) {
         alert('Error updating profile: ' + error.message);
       } else {
@@ -460,15 +407,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Feature: Bio / Prompt Comment Note Modal Handlers
   const bioCommentModal = document.getElementById('bio-comment-modal');
   const cancelCommentBtn = document.getElementById('cancel-comment-btn');
   const sendCommentConnectBtn = document.getElementById('send-comment-connect-btn');
-
   if (cancelCommentBtn && bioCommentModal) {
     cancelCommentBtn.addEventListener('click', () => { bioCommentModal.classList.remove('show'); });
   }
-
   if (sendCommentConnectBtn) {
     sendCommentConnectBtn.addEventListener('click', async () => {
       const commentText = document.getElementById('bio-comment-input').value.trim();
@@ -482,22 +426,17 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Feature: User Reporting Modal Handlers
   const closeReportModalBtn = document.getElementById('close-report-modal-btn');
   const submitReportBtn = document.getElementById('submit-report-btn');
   const reportModal = document.getElementById('report-modal');
-
   if (closeReportModalBtn && reportModal) {
     closeReportModalBtn.addEventListener('click', () => { reportModal.classList.remove('show'); });
   }
-
   if (submitReportBtn) {
     submitReportBtn.addEventListener('click', async () => {
       const reason = document.getElementById('report-reason').value;
       const details = document.getElementById('report-details').value.trim();
-
       if (!activeReportTargetId) return;
-
       const { error } = await supabaseClient.from('reports').insert([
         {
           reporter_id: currentUser.id,
@@ -506,7 +445,6 @@ window.addEventListener('DOMContentLoaded', async () => {
           details: details
         }
       ]);
-
       if (error) {
         alert('Error submitting report: ' + error.message);
       } else {
@@ -516,16 +454,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Feature: Incoming Like Review Modal Handlers
   const reviewModal = document.getElementById('review-modal');
   const closeReviewModalBtn = document.getElementById('close-review-modal-btn');
   const reviewPassBtn = document.getElementById('review-pass-btn');
   const reviewConnectBtn = document.getElementById('review-connect-btn');
-
   if (closeReviewModalBtn && reviewModal) {
     closeReviewModalBtn.addEventListener('click', () => { reviewModal.classList.remove('show'); });
   }
-
   if (reviewPassBtn) {
     reviewPassBtn.addEventListener('click', async () => {
       if (currentReviewConnection) {
@@ -535,7 +470,6 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
     });
   }
-
   if (reviewConnectBtn) {
     reviewConnectBtn.addEventListener('click', async () => {
       if (currentReviewConnection) {
@@ -548,10 +482,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Feature: Real-time Chat Messaging Input Handlers
   const sendMessageBtn = document.getElementById('send-message-btn');
   const chatMessageInput = document.getElementById('chat-message-input');
-
   if (sendMessageBtn && chatMessageInput) {
     sendMessageBtn.addEventListener('click', async () => { await sendChatMessage(); });
     chatMessageInput.addEventListener('keypress', async (e) => {
@@ -559,22 +491,18 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Feature: Chat Header Partner Profile & Unmatch Handlers
   const chatHeaderProfileTrigger = document.getElementById('chat-header-profile-trigger');
   const partnerProfileModal = document.getElementById('partner-profile-modal');
   const closePartnerModalBtn = document.getElementById('close-partner-modal-btn');
   const unmatchBtn = document.getElementById('unmatch-btn');
-
   if (chatHeaderProfileTrigger) {
     chatHeaderProfileTrigger.addEventListener('click', () => {
       if (activeChatPartner) { openPartnerProfileModal(activeChatPartner); }
     });
   }
-
   if (closePartnerModalBtn && partnerProfileModal) {
     closePartnerModalBtn.addEventListener('click', () => { partnerProfileModal.classList.remove('show'); });
   }
-
   if (unmatchBtn) {
     unmatchBtn.addEventListener('click', async () => {
       if (confirm('Are you sure you want to unmatch?')) { await unmatchCurrentConnection(); }
@@ -587,24 +515,21 @@ window.addEventListener('DOMContentLoaded', async () => {
    SECTION 5: PROFILE & ONBOARDING MANAGEMENT
    ========================================================================= */
 
-// Saves initial profile data during onboarding and initiates questionnaire
+// SECTION 5.a: Initial Profile Saving
 async function triggerSaveProfile() {
   const fullName = document.getElementById('full-name').value.trim();
   const location = document.getElementById('location').value.trim();
   const intent = document.getElementById('intent').value;
   const bio = document.getElementById('bio').value.trim();
   const termsAgreed = document.getElementById('terms-agree-checkbox').checked;
-
   if (!fullName || !location) {
     alert('Please fill out your name and location.');
     return;
   }
-
   if (!termsAgreed) {
     alert('You must agree to the Terms & Conditions to create an account.');
     return;
   }
-
   if (!currentUser) {
     const { data: sessionData } = await supabaseClient.auth.getSession();
     if (sessionData && sessionData.session) {
@@ -614,13 +539,11 @@ async function triggerSaveProfile() {
       return;
     }
   }
-
   const saveBtn = document.getElementById('save-profile-btn');
   if (saveBtn) {
     saveBtn.disabled = true;
     saveBtn.textContent = 'Saving Profile...';
   }
-
   const profileData = {
     id: currentUser.id,
     full_name: fullName,
@@ -646,14 +569,11 @@ async function triggerSaveProfile() {
     longitude: tempLongitude,
     updated_at: new Date().toISOString()
   };
-
   const { error } = await supabaseClient.from('profiles').upsert([profileData], { onConflict: 'id' });
-
   if (saveBtn) {
     saveBtn.disabled = false;
     saveBtn.textContent = 'Save Profile & Begin Quiz';
   }
-
   if (error) {
     alert('Error saving profile: ' + error.message);
   } else {
@@ -661,23 +581,19 @@ async function triggerSaveProfile() {
   }
 }
 
-// Uploads images to Supabase storage bucket and returns public URLs
+// SECTION 5.b: Storage Uploads & Thumbnail Management
 async function uploadImagesToSupabase(file, previewContainerId, isEditMode = false) {
   const previewContainer = document.getElementById(previewContainerId);
   if (!file) return null;
-
   const fileExt = file.name.split('.').pop();
   const fileName = `${currentUser.id}_${Date.now()}.${fileExt}`;
-
   const { error: uploadError } = await supabaseClient.storage
     .from('profile-images')
     .upload(fileName, file);
-
   if (uploadError) {
     alert('Upload error: ' + uploadError.message);
     return null;
   }
-
   const { data } = supabaseClient.storage.from('profile-images').getPublicUrl(fileName);
   if (data && data.publicUrl) {
     if (!isEditMode) {
@@ -688,11 +604,9 @@ async function uploadImagesToSupabase(file, previewContainerId, isEditMode = fal
     }
     return data.publicUrl;
   }
-
   return null;
 }
 
-// Renders interactive photo thumbnails inside the edit profile modal
 function renderEditPhotoThumbnails() {
   const preview = document.getElementById('edit-photo-preview');
   preview.innerHTML = '';
@@ -723,7 +637,7 @@ function updatePhotoCountIndicator() {
   }
 }
 
-// Automatically monitors and routes user based on profile setup completion status
+// SECTION 5.c: Profile Status Routing
 async function checkProfileStatus() {
   if (!currentUser) return;
   const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
@@ -745,10 +659,10 @@ async function checkProfileStatus() {
 
 
 /* =========================================================================
-   SECTION 6: QUESTIONNAIRE ENGINE (Personal Answer & Acceptable Partner Choices)
+   SECTION 6: QUESTIONNAIRE ENGINE
    ========================================================================= */
 
-// Loads either onboarding or deep-dive questionnaire questions with acceptable partner option pickers
+// SECTION 6.a: Questionnaire & Deep-Dive Loader
 async function loadQuestionnaire(isDeepDive = false) {
   showSection('quiz-section');
   const container = document.getElementById('quiz-container');
@@ -762,29 +676,23 @@ async function loadQuestionnaire(isDeepDive = false) {
   } else {
     query = query.or('is_deep_dive.is.null,is_deep_dive.eq.false');
   }
-
   let { data: questions, error } = await query.order('id', { ascending: true });
-
-  // Fallback: if deep dive query returns nothing, load all questions to prevent load errors
+  
   if ((error || !questions || !questions.length) && isDeepDive) {
     const fallbackQuery = await supabaseClient.from('questions').select('*').order('id', { ascending: true });
     questions = fallbackQuery.data;
     error = fallbackQuery.error;
   }
-
   if (error || !questions || !questions.length) {
     container.innerHTML = '<p style="text-align: center; color: var(--accent);">Unable to load questions.</p>';
     return;
   }
-
   quizQuestions = questions;
   container.innerHTML = isDeepDive ? '<h3 style="color:var(--primary); margin-bottom:12px;">Deep-Dive Profile Questionnaire</h3>' : '';
-
   questions.forEach((q, idx) => {
     if (!userAnswersMap[q.id]) {
       userAnswersMap[q.id] = { answer: null, acceptable: [] };
     }
-
     const card = document.createElement('div');
     card.className = 'question-card';
     card.style.marginBottom = '20px';
@@ -792,15 +700,13 @@ async function loadQuestionnaire(isDeepDive = false) {
     card.style.background = '#fff';
     card.style.borderRadius = '12px';
     card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
-
-    // Render personal single-select option buttons
+    
     let ownOptionsHTML = '';
     q.options.forEach(opt => {
       const isSelected = userAnswersMap[q.id].answer === opt.id ? 'selected' : '';
       ownOptionsHTML += `<button type="button" class="option-btn ${isSelected}" data-qid="${q.id}" data-optid="${opt.id}">${opt.label}</button>`;
     });
-
-    // Render multi-select checkboxes for acceptable partner answers
+    
     let acceptableOptionsHTML = '';
     q.options.forEach(opt => {
       const isChecked = userAnswersMap[q.id].acceptable.includes(opt.id) ? 'checked' : '';
@@ -811,7 +717,6 @@ async function loadQuestionnaire(isDeepDive = false) {
         </label>
       `;
     });
-
     card.innerHTML = `
       <span class="badge" style="font-size: 0.7rem; background: var(--primary-light); color: var(--primary); padding: 3px 8px; border-radius: 4px; font-weight: 600;">${q.category || 'Lifestyle'}</span>
       <p style="font-weight: 600; font-size: 0.95rem; margin: 8px 0 12px 0; color: var(--text-main);">${idx + 1}. ${q.question_text}</p>
@@ -820,7 +725,6 @@ async function loadQuestionnaire(isDeepDive = false) {
         <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Your Answer:</div>
         <div>${ownOptionsHTML}</div>
       </div>
-
       <div style="background: #faf7f5; padding: 10px 12px; border-radius: 8px; border-left: 3px solid var(--primary);">
         <div style="font-size: 0.75rem; font-weight: 700; color: var(--primary); text-transform: uppercase; margin-bottom: 4px;">Acceptable answers from your match:</div>
         <div>${acceptableOptionsHTML}</div>
@@ -829,7 +733,6 @@ async function loadQuestionnaire(isDeepDive = false) {
     container.appendChild(card);
   });
 
-  // Event listener for user's own answer selection
   document.querySelectorAll('.option-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const qid = e.target.getAttribute('data-qid');
@@ -840,18 +743,15 @@ async function loadQuestionnaire(isDeepDive = false) {
       if (!userAnswersMap[qid]) userAnswersMap[qid] = { answer: null, acceptable: [] };
       userAnswersMap[qid].answer = optid;
       
-      // Automatically include own answer in acceptable list by default if empty
       if (userAnswersMap[qid].acceptable.length === 0) {
         userAnswersMap[qid].acceptable.push(optid);
         const matchingChk = document.querySelector(`.acceptable-chk[data-qid="${qid}"][data-optid="${optid}"]`);
         if (matchingChk) matchingChk.checked = true;
       }
-
       updateQuizSubmitButtonState();
     });
   });
 
-  // Event listener for acceptable partner options checkboxes
   document.querySelectorAll('.acceptable-chk').forEach(chk => {
     chk.addEventListener('change', (e) => {
       const qid = e.target.getAttribute('data-qid');
@@ -868,17 +768,15 @@ async function loadQuestionnaire(isDeepDive = false) {
       }
     });
   });
-
   updateQuizSubmitButtonState();
 }
 
+// SECTION 6.b: Quiz State & Submit Validation
 function updateQuizSubmitButtonState() {
   const submitBtn = document.getElementById('submit-quiz-btn');
   if (!submitBtn) return;
-
   const answeredCount = Object.keys(userAnswersMap).filter(qid => userAnswersMap[qid] && userAnswersMap[qid].answer !== null).length;
   const totalCount = quizQuestions.length;
-
   submitBtn.style.display = 'block';
   if (answeredCount >= totalCount) {
     submitBtn.disabled = false;
@@ -898,31 +796,26 @@ function updateQuizSubmitButtonState() {
    SECTION 7: DASHBOARD, DISCOVERY FEED & ADVANCED MATCHING ALGORITHM
    ========================================================================= */
 
-// Loads discovery feed, applies gender/intent filters, and calculates reciprocal match scores
+// SECTION 7.a: Feed Data Fetching & Match Score Calculation
 async function loadDashboard() {
   showSection('dashboard-section');
   const deckContainer = document.getElementById('deck-container');
   if (!deckContainer) return;
-
   deckContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding-top: 100px;">Finding nearby profiles...</p>';
-
   const { data: myProfile } = await supabaseClient
     .from('profiles')
     .select('*')
     .eq('id', currentUser.id)
     .single();
-
   const myLat = myProfile ? myProfile.latitude : null;
   const myLon = myProfile ? myProfile.longitude : null;
   const preferredGenders = myProfile?.preferred_genders || ['Man', 'Woman', 'Non-binary', 'Other'];
   const preferredIntents = myProfile?.preferred_intents || ['both', 'platonic', 'romantic'];
-
-  // Fetch current user's answers and acceptable choices for matching
+  
   const { data: myAnswers } = await supabaseClient
     .from('user_answers')
     .select('question_id, selected_option_id, acceptable_option_ids')
     .eq('user_id', currentUser.id);
-
   const myAnswersLookup = {};
   if (myAnswers) {
     myAnswers.forEach(a => { 
@@ -932,23 +825,18 @@ async function loadDashboard() {
       }; 
     });
   }
-
   const { data: existingConnections } = await supabaseClient
     .from('connections')
     .select('requester_id, receiver_id, status, created_at')
     .or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
-
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
   const excludedUserIds = new Set([currentUser.id]);
-
   if (existingConnections) {
     existingConnections.forEach(c => {
       const otherId = c.requester_id === currentUser.id ? c.receiver_id : c.requester_id;
       const createdAt = new Date(c.created_at);
-
       if (c.status === 'accepted') {
         excludedUserIds.add(otherId);
       } else if (c.status === 'pending') {
@@ -961,20 +849,15 @@ async function loadDashboard() {
       }
     });
   }
-
   const { data: profiles, error } = await supabaseClient.from('profiles').select('*');
-
   if (error || !profiles) {
     deckContainer.innerHTML = '<p style="text-align: center; color: var(--accent);">Error loading profiles.</p>';
     return;
   }
-
-  // Fetch all user answers and acceptable option arrays to compute compatibility scores
-  const { data: allAnswers } = await supabaseClient.from('user_answers').select('user_id, question_id, selected_option_id, acceptable_option_ids');
   
+  const { data: allAnswers } = await supabaseClient.from('user_answers').select('user_id, question_id, selected_option_id, acceptable_option_ids');
   const profilesAnswersMap = {};
   const profilesAcceptableMap = {};
-
   if (allAnswers) {
     allAnswers.forEach(ans => {
       if (!profilesAnswersMap[ans.user_id]) profilesAnswersMap[ans.user_id] = {};
@@ -985,20 +868,15 @@ async function loadDashboard() {
     });
   }
 
-  // Filter profiles based on gender and relationship intent preferences
   let filteredProfiles = profiles.filter(p => {
     if (excludedUserIds.has(p.id)) return false;
-
     const pGender = p.gender || 'Other';
     if (preferredGenders.length > 0 && !preferredGenders.includes(pGender)) return false;
-
     const pIntent = p.intent || 'both';
     if (preferredIntents.length > 0 && !preferredIntents.includes(pIntent) && pIntent !== 'both') return false;
-
     return true;
   });
 
-  // Calculate reciprocal match scores based on mutual acceptable options
   filteredProfiles = filteredProfiles.map(p => {
     let score = 75;
     const targetAnswers = profilesAnswersMap[p.id] || {};
@@ -1006,41 +884,33 @@ async function loadDashboard() {
     
     let mutuallyCompatibleCount = 0;
     let totalCompared = 0;
-
     Object.keys(myAnswersLookup).forEach(qid => {
       const myAns = myAnswersLookup[qid]?.answer;
       const myAcceptable = myAnswersLookup[qid]?.acceptable || [myAns];
       
       const theirAns = targetAnswers[qid];
       const theirAcceptable = targetAcceptable[qid] || [theirAns];
-
       if (myAns !== undefined && theirAns !== undefined) {
         totalCompared++;
         const iAcceptThem = myAcceptable.includes(theirAns);
         const theyAcceptMe = theirAcceptable.includes(myAns);
-
         if (iAcceptThem && theyAcceptMe) {
           mutuallyCompatibleCount++;
         }
       }
     });
-
     if (totalCompared > 0) {
       const compatibilityRatio = mutuallyCompatibleCount / totalCompared;
       score = Math.floor(50 + (compatibilityRatio * 49));
     }
-
     const distance = calculateDistance(myLat, myLon, p.latitude, p.longitude);
-
     return { ...p, matchScore: Math.min(score, 99), distanceKm: distance };
   });
 
-  // Sort profiles by highest match score, then closest distance
   filteredProfiles.sort((a, b) => {
     if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
     return a.distanceKm - b.distanceKm;
   });
-
   availableProfiles = filteredProfiles;
   currentCardIndex = 0;
   
@@ -1049,13 +919,13 @@ async function loadDashboard() {
   renderDeck();
 }
 
+// SECTION 7.b: Active Chat Limits & Unread Message Monitors
 async function updateActiveChatCount() {
   const { data: activeMatches } = await supabaseClient
     .from('connections')
     .select('id')
     .eq('status', 'accepted')
     .or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
-
   const count = activeMatches ? activeMatches.length : 0;
   const countBadge = document.getElementById('active-chat-count');
   if (countBadge) { countBadge.innerHTML = `${count} / 3`; }
@@ -1067,16 +937,13 @@ async function checkForUnreadMessages() {
     .select('id')
     .eq('status', 'accepted')
     .or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
-
   if (!connections || connections.length === 0) return;
   const connectionIds = connections.map(c => c.id);
-
   const { data: latestMsgs } = await supabaseClient
     .from('messages')
     .select('sender_id, created_at, connection_id')
     .in('connection_id', connectionIds)
     .order('created_at', { ascending: false });
-
   if (latestMsgs && latestMsgs.length > 0) {
     const mostRecent = latestMsgs[0];
     if (mostRecent.sender_id !== currentUser.id) {
@@ -1088,14 +955,12 @@ async function checkForUnreadMessages() {
   }
 }
 
-// Bumble-Style Continuous Scroll Feed Renderer
+// SECTION 7.c: Bumble-Style Scroll Feed Renderer & Swipe Logic
 function renderDeck() {
   const deckContainer = document.getElementById('deck-container');
   deckContainer.innerHTML = '';
-
   const oldBar = document.getElementById('sticky-action-bar');
   if (oldBar) oldBar.remove();
-
   if (currentCardIndex >= availableProfiles.length) {
     deckContainer.innerHTML = `
       <div style="text-align: center; padding-top: 140px;">
@@ -1107,13 +972,10 @@ function renderDeck() {
     `;
     return;
   }
-
   const profile = availableProfiles[currentCardIndex];
   const matchPercentage = profile.matchScore || 85;
   const intentText = profile.intent ? profile.intent.charAt(0).toUpperCase() + profile.intent.slice(1) : 'Both';
-
   let streamHTML = '';
-
   streamHTML += `
     <div class="profile-feed-card">
       <div class="feed-header-info">
@@ -1126,13 +988,10 @@ function renderDeck() {
         </div>
       </div>
   `;
-
   const images = profile.images || [];
-
   if (images.length > 0) {
     streamHTML += `<img src="${images[0]}" class="feed-photo" alt="Profile Photo" />`;
   }
-
   if (profile.bio && profile.bio.trim() !== '') {
     streamHTML += `
       <div class="feed-bio-box">
@@ -1141,7 +1000,6 @@ function renderDeck() {
       </div>
     `;
   }
-
   const detailMappings = [
     { key: 'gender', icon: '👤' },
     { key: 'pronouns', icon: '🗣️' },
@@ -1159,7 +1017,6 @@ function renderDeck() {
     { key: 'children', icon: '👶' },
     { key: 'pets', icon: '🐾' }
   ];
-
   let tagsHTML = '';
   detailMappings.forEach(f => {
     let val = profile[f.key];
@@ -1171,7 +1028,6 @@ function renderDeck() {
       tagsHTML += `<span class="detail-tag">${f.icon} ${formattedVal}</span>`;
     }
   });
-
   if (tagsHTML) {
     streamHTML += `
       <div class="feed-section-box">
@@ -1180,11 +1036,9 @@ function renderDeck() {
       </div>
     `;
   }
-
   if (images.length > 1) {
     streamHTML += `<img src="${images[1]}" class="feed-photo" alt="Profile Photo" />`;
   }
-
   if (profile.prompt_question && profile.prompt_answer && profile.prompt_answer.trim() !== '') {
     streamHTML += `
       <div class="feed-prompt-box">
@@ -1193,14 +1047,12 @@ function renderDeck() {
       </div>
     `;
   }
-
   if (images.length > 2) {
     streamHTML += `<img src="${images[2]}" class="feed-photo" alt="Profile Photo" />`;
   }
   if (images.length > 3) {
     streamHTML += `<img src="${images[3]}" class="feed-photo" alt="Profile Photo" />`;
   }
-
   streamHTML += `
       <div style="padding: 16px; text-align: center;">
         <div class="card-intent" style="margin-bottom: 12px;">🌱 Intent: <strong>${escapeHTML(intentText)}</strong></div>
@@ -1209,9 +1061,7 @@ function renderDeck() {
       </div>
     </div>
   `;
-
   deckContainer.innerHTML = streamHTML;
-
   const actionBar = document.createElement('div');
   actionBar.className = 'sticky-action-bar';
   actionBar.id = 'sticky-action-bar';
@@ -1221,120 +1071,17 @@ function renderDeck() {
     <button type="button" class="action-circle-btn connect" id="bar-connect-btn" title="Connect">♥</button>
   `;
   document.getElementById('app-container').appendChild(actionBar);
-
   document.getElementById('bar-pass-btn').addEventListener('click', () => swipeCurrentCard('left'));
   document.getElementById('bar-connect-btn').addEventListener('click', () => swipeCurrentCard('right'));
   document.getElementById('bar-super-btn').addEventListener('click', () => { openCommentModal(profile); });
-
   const commentBtn = deckContainer.querySelector('#open-comment-modal-btn');
   if (commentBtn) {
     commentBtn.addEventListener('click', () => { openCommentModal(profile); });
   }
 }
 
-async function openPreferencesModal() {
-  const modal = document.getElementById('preferences-modal');
-  const { data: profile } = await supabaseClient.from('profiles').select('preferred_genders, preferred_intents').eq('id', currentUser.id).single();
-  
-  if (profile) {
-    const genders = profile.preferred_genders || ['Man', 'Woman', 'Non-binary', 'Other'];
-    document.querySelectorAll('#pref-gender-checkboxes input').forEach(chk => {
-      chk.checked = genders.includes(chk.value);
-    });
-
-    const intents = profile.preferred_intents || ['both'];
-    document.getElementById('pref-intent-select').value = intents.length === 1 ? intents[0] : 'all';
-  }
-
-  modal.classList.add('show');
-}
-
-async function saveUserPreferences() {
-  const selectedGenders = [];
-  document.querySelectorAll('#pref-gender-checkboxes input:checked').forEach(chk => {
-    selectedGenders.push(chk.value);
-  });
-
-  const intentVal = document.getElementById('pref-intent-select').value;
-  const selectedIntents = intentVal === 'all' ? ['both', 'platonic', 'romantic'] : [intentVal];
-
-  const { error } = await supabaseClient.from('profiles').update({
-    preferred_genders: selectedGenders,
-    preferred_intents: selectedIntents
-  }).eq('id', currentUser.id);
-
-  if (error) {
-    alert('Error saving preferences: ' + error.message);
-  } else {
-    document.getElementById('preferences-modal').classList.remove('show');
-    alert('Preferences updated successfully!');
-    await loadDashboard();
-  }
-}
-
-function openCommentModal(profile) {
-  const modal = document.getElementById('bio-comment-modal');
-  const bioBox = document.getElementById('comment-target-bio');
-  document.getElementById('bio-comment-input').value = '';
-
-  bioBox.innerHTML = `<strong>${escapeHTML(profile.full_name)}'s Reflection:</strong><br/>"${escapeHTML(profile.bio || profile.prompt_answer || 'No bio provided.')}"`;
-  modal.classList.add('show');
-}
-
-async function handleRightSwipeWithNote(targetProfile, noteText) {
-  const { data: incomingRequest } = await supabaseClient
-    .from('connections')
-    .select('*')
-    .eq('requester_id', targetProfile.id)
-    .eq('receiver_id', currentUser.id)
-    .single();
-
-  if (incomingRequest) {
-    const { error } = await supabaseClient
-      .from('connections')
-      .update({ status: 'accepted', updated_at: new Date().toISOString() })
-      .eq('id', incomingRequest.id);
-
-    if (!error) {
-      await supabaseClient.from('messages').insert([
-        { connection_id: incomingRequest.id, sender_id: currentUser.id, message_text: `Note: ${noteText}` }
-      ]);
-      
-      if (window.gtag) {
-        gtag('event', 'match_created', { method: 'note_connect' });
-      }
-
-      alert(`🎉 It's a Match! Your note was sent and your chat is now open.`);
-      await updateActiveChatCount();
-    }
-  } else {
-    const { data: newConn, error } = await supabaseClient
-      .from('connections')
-      .upsert([
-        { requester_id: currentUser.id, receiver_id: targetProfile.id, status: 'pending' }
-      ], { onConflict: 'requester_id,receiver_id' })
-      .select()
-      .single();
-
-    if (newConn && !error) {
-      await supabaseClient.from('messages').insert([
-        { connection_id: newConn.id, sender_id: currentUser.id, message_text: `Note: ${noteText}` }
-      ]);
-
-      if (window.gtag) {
-        gtag('event', 'connection_requested', { method: 'note_connect' });
-      }
-    }
-    alert('Your note and connection request have been sent!');
-  }
-
-  currentCardIndex++;
-  renderDeck();
-}
-
 async function swipeCurrentCard(direction) {
   const targetProfile = availableProfiles[currentCardIndex];
-
   if (targetProfile) {
     if (direction === 'right') {
       await handleRightSwipe(targetProfile);
@@ -1342,7 +1089,6 @@ async function swipeCurrentCard(direction) {
       await handleLeftSwipe(targetProfile);
     }
   }
-
   currentCardIndex++;
   renderDeck();
 }
@@ -1354,13 +1100,11 @@ async function handleRightSwipe(targetProfile) {
     .eq('requester_id', targetProfile.id)
     .eq('receiver_id', currentUser.id)
     .single();
-
   if (incomingRequest) {
     const { error } = await supabaseClient
       .from('connections')
       .update({ status: 'accepted', updated_at: new Date().toISOString() })
       .eq('id', incomingRequest.id);
-
     if (!error) {
       if (window.gtag) {
         gtag('event', 'match_created', { method: 'swipe_right' });
@@ -1374,7 +1118,6 @@ async function handleRightSwipe(targetProfile) {
       .upsert([
         { requester_id: currentUser.id, receiver_id: targetProfile.id, status: 'pending' }
       ], { onConflict: 'requester_id,receiver_id' });
-
     if (!error && window.gtag) {
       gtag('event', 'connection_requested', { method: 'swipe_right' });
     }
@@ -1389,34 +1132,118 @@ async function handleLeftSwipe(targetProfile) {
     ], { onConflict: 'requester_id,receiver_id' });
 }
 
+// SECTION 7.d: Preferences Modal & Note-Connect Handlers
+async function openPreferencesModal() {
+  const modal = document.getElementById('preferences-modal');
+  const { data: profile } = await supabaseClient.from('profiles').select('preferred_genders, preferred_intents').eq('id', currentUser.id).single();
+  
+  if (profile) {
+    const genders = profile.preferred_genders || ['Man', 'Woman', 'Non-binary', 'Other'];
+    document.querySelectorAll('#pref-gender-checkboxes input').forEach(chk => {
+      chk.checked = genders.includes(chk.value);
+    });
+    const intents = profile.preferred_intents || ['both'];
+    document.getElementById('pref-intent-select').value = intents.length === 1 ? intents[0] : 'all';
+  }
+  modal.classList.add('show');
+}
+
+async function saveUserPreferences() {
+  const selectedGenders = [];
+  document.querySelectorAll('#pref-gender-checkboxes input:checked').forEach(chk => {
+    selectedGenders.push(chk.value);
+  });
+  const intentVal = document.getElementById('pref-intent-select').value;
+  const selectedIntents = intentVal === 'all' ? ['both', 'platonic', 'romantic'] : [intentVal];
+  const { error } = await supabaseClient.from('profiles').update({
+    preferred_genders: selectedGenders,
+    preferred_intents: selectedIntents
+  }).eq('id', currentUser.id);
+  if (error) {
+    alert('Error saving preferences: ' + error.message);
+  } else {
+    document.getElementById('preferences-modal').classList.remove('show');
+    alert('Preferences updated successfully!');
+    await loadDashboard();
+  }
+}
+
+function openCommentModal(profile) {
+  const modal = document.getElementById('bio-comment-modal');
+  const bioBox = document.getElementById('comment-target-bio');
+  document.getElementById('bio-comment-input').value = '';
+  bioBox.innerHTML = `<strong>${escapeHTML(profile.full_name)}'s Reflection:</strong><br/>"${escapeHTML(profile.bio || profile.prompt_answer || 'No bio provided.')}"`;
+  modal.classList.add('show');
+}
+
+async function handleRightSwipeWithNote(targetProfile, noteText) {
+  const { data: incomingRequest } = await supabaseClient
+    .from('connections')
+    .select('*')
+    .eq('requester_id', targetProfile.id)
+    .eq('receiver_id', currentUser.id)
+    .single();
+  if (incomingRequest) {
+    const { error } = await supabaseClient
+      .from('connections')
+      .update({ status: 'accepted', updated_at: new Date().toISOString() })
+      .eq('id', incomingRequest.id);
+    if (!error) {
+      await supabaseClient.from('messages').insert([
+        { connection_id: incomingRequest.id, sender_id: currentUser.id, message_text: `Note: ${noteText}` }
+      ]);
+      
+      if (window.gtag) {
+        gtag('event', 'match_created', { method: 'note_connect' });
+      }
+      alert(`🎉 It's a Match! Your note was sent and your chat is now open.`);
+      await updateActiveChatCount();
+    }
+  } else {
+    const { data: newConn, error } = await supabaseClient
+      .from('connections')
+      .upsert([
+        { requester_id: currentUser.id, receiver_id: targetProfile.id, status: 'pending' }
+      ], { onConflict: 'requester_id,receiver_id' })
+      .select()
+      .single();
+    if (newConn && !error) {
+      await supabaseClient.from('messages').insert([
+        { connection_id: newConn.id, sender_id: currentUser.id, message_text: `Note: ${noteText}` }
+      ]);
+      if (window.gtag) {
+        gtag('event', 'connection_requested', { method: 'note_connect' });
+      }
+    }
+    alert('Your note and connection request have been sent!');
+  }
+  currentCardIndex++;
+  renderDeck();
+}
+
 
 /* =========================================================================
    SECTION 8: CONNECTIONS, CHAT & MESSAGING SYSTEM
    ========================================================================= */
 
-// Loads accepted matches and pending connection requests
+// SECTION 8.a: Accepted Matches & Pending Requests List
 async function loadConnectionsList() {
   const acceptedContainer = document.getElementById('accepted-matches-container');
   const pendingContainer = document.getElementById('pending-matches-container');
-
   acceptedContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.88rem;">Loading...</p>';
   pendingContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.88rem;">Loading...</p>';
-
   const { data: connections, error } = await supabaseClient
     .from('connections')
     .select('*, requester:profiles!connections_requester_id_fkey(*), receiver:profiles!connections_receiver_id_fkey(*)')
     .or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
-
   if (error || !connections) {
     acceptedContainer.innerHTML = '<p style="color: var(--text-muted);">No active connections yet.</p>';
     pendingContainer.innerHTML = '<p style="color: var(--text-muted);">No pending requests.</p>';
     return;
   }
-
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
   const accepted = connections.filter(c => c.status === 'accepted');
   const pending = connections.filter(c => {
     if (c.status !== 'pending') return false;
@@ -1426,7 +1253,6 @@ async function loadConnectionsList() {
     if (!isIncoming && createdAt < thirtyDaysAgo) return false;
     return true;
   });
-
   if (accepted.length === 0) {
     acceptedContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.88rem;">No active matches yet. Keep exploring!</p>';
   } else {
@@ -1437,7 +1263,6 @@ async function loadConnectionsList() {
         .eq('connection_id', c.id)
         .order('created_at', { ascending: false })
         .limit(1);
-
       const lastMsg = msgs && msgs.length > 0 ? msgs[0] : null;
       return {
         connection: c,
@@ -1445,19 +1270,15 @@ async function loadConnectionsList() {
         lastMessageTime: lastMsg ? new Date(lastMsg.created_at).getTime() : new Date(c.updated_at || c.created_at).getTime()
       };
     }));
-
     acceptedWithMessages.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
-
     acceptedContainer.innerHTML = '';
     acceptedWithMessages.forEach(itemData => {
       const c = itemData.connection;
       const otherUser = c.requester_id === currentUser.id ? c.receiver : c.requester;
       if (!otherUser) return;
-
       const avatarHTML = (otherUser.images && otherUser.images.length > 0)
         ? `<img src="${otherUser.images[0]}" class="connection-avatar" alt="${escapeHTML(otherUser.full_name)}" />`
         : `<div class="connection-avatar">👤</div>`;
-
       const item = document.createElement('div');
       item.className = 'connection-item';
       item.innerHTML = `
@@ -1472,7 +1293,6 @@ async function loadConnectionsList() {
       acceptedContainer.appendChild(item);
     });
   }
-
   if (pending.length === 0) {
     pendingContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.88rem;">No pending connection requests.</p>';
   } else {
@@ -1481,11 +1301,9 @@ async function loadConnectionsList() {
       const otherUser = c.requester_id === currentUser.id ? c.receiver : c.requester;
       if (!otherUser) return;
       const isSentByMe = c.requester_id === currentUser.id;
-
       const avatarHTML = (otherUser.images && otherUser.images.length > 0)
         ? `<img src="${otherUser.images[0]}" class="connection-avatar" alt="${escapeHTML(otherUser.full_name)}" />`
         : `<div class="connection-avatar">👤</div>`;
-
       const item = document.createElement('div');
       item.className = `connection-item ${!isSentByMe ? 'clickable' : ''}`;
       item.innerHTML = `
@@ -1496,23 +1314,20 @@ async function loadConnectionsList() {
         </div>
         <span class="status-tag pending">${isSentByMe ? 'Pending' : 'Incoming 💌'}</span>
       `;
-
       if (!isSentByMe) {
         item.addEventListener('click', () => { openReviewModal(c, otherUser); });
       }
-
       pendingContainer.appendChild(item);
     });
   }
 }
 
+// SECTION 8.b: Real-time Chat Room & Messaging
 async function openChat(connectionId, partnerProfile) {
   activeChatConnectionId = connectionId;
   activeChatPartner = partnerProfile;
-
   const nameEl = document.getElementById('chat-partner-name');
   if (nameEl) nameEl.textContent = partnerProfile.full_name;
-
   showSection('chat-section');
   await loadChatMessages();
 }
@@ -1520,26 +1335,21 @@ async function openChat(connectionId, partnerProfile) {
 async function loadChatMessages() {
   const container = document.getElementById('chat-messages-container');
   if (!container) return;
-
   container.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">Loading messages...</p>';
-
   const { data: messages, error } = await supabaseClient
     .from('messages')
     .select('*')
     .eq('connection_id', activeChatConnectionId)
     .order('created_at', { ascending: true });
-
   if (error) {
     container.innerHTML = '<p style="text-align: center; color: var(--accent); font-size: 0.85rem;">Error loading messages.</p>';
     return;
   }
-
   container.innerHTML = '';
   if (!messages || messages.length === 0) {
     container.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 0.85rem; margin-top: 20px;">No messages yet. Say hello and start a mindful conversation!</p>';
     return;
   }
-
   messages.forEach(msg => {
     const bubble = document.createElement('div');
     const isMe = msg.sender_id === currentUser.id;
@@ -1547,7 +1357,6 @@ async function loadChatMessages() {
     bubble.textContent = msg.message_text;
     container.appendChild(bubble);
   });
-
   container.scrollTop = container.scrollHeight;
 }
 
@@ -1556,15 +1365,12 @@ async function sendChatMessage() {
   if (!input) return;
   const text = input.value.trim();
   if (!text || !activeChatConnectionId) return;
-
   input.value = '';
-
   const { error } = await supabaseClient
     .from('messages')
     .insert([
       { connection_id: activeChatConnectionId, sender_id: currentUser.id, message_text: text }
     ]);
-
   if (error) {
     alert('Error sending message: ' + error.message);
   } else {
@@ -1572,7 +1378,6 @@ async function sendChatMessage() {
       .from('connections')
       .update({ updated_at: new Date().toISOString() })
       .eq('id', activeChatConnectionId);
-
     await loadChatMessages();
   }
 }
@@ -1582,19 +1387,17 @@ async function sendChatMessage() {
    SECTION 9: PROFILE MODALS, EDITING, REPORTING & ACCOUNT MANAGEMENT
    ========================================================================= */
 
-// Displays current user profile preview modal with button to trigger deep-dive questionnaire
+// SECTION 9.a: Profile Preview & Deep-Dive Trigger
 async function showProfilePreview() {
   const modal = document.getElementById('profile-modal');
   const detailsEl = document.getElementById('modal-profile-details');
   detailsEl.innerHTML = 'Loading your profile...';
   modal.classList.add('show');
-
   const { data: profile } = await supabaseClient
     .from('profiles')
     .select('*')
     .eq('id', currentUser.id)
     .single();
-
   if (profile) {
     const intentText = profile.intent ? profile.intent.charAt(0).toUpperCase() + profile.intent.slice(1) : 'Both';
     let photosHTML = '';
@@ -1603,7 +1406,6 @@ async function showProfilePreview() {
       profile.images.forEach(u => { photosHTML += `<img src="${u}" style="width:60px; height:60px; object-fit:cover; border-radius:6px;" />`; });
       photosHTML += `</div>`;
     }
-
     detailsEl.innerHTML = `
       <p style="margin-bottom: 6px;"><strong>Name:</strong> ${escapeHTML(profile.full_name)}</p>
       <p style="margin-bottom: 6px;"><strong>Location:</strong> ${escapeHTML(profile.location_name)}</p>
@@ -1613,7 +1415,6 @@ async function showProfilePreview() {
       ${profile.prompt_question ? `<p style="margin-top: 8px;"><strong>${escapeHTML(profile.prompt_question)}</strong><br/>"${escapeHTML(profile.prompt_answer || '')}"</p>` : ''}
       <button type="button" id="complete-deep-dive-btn" style="background: var(--primary-light); color: var(--primary); border: 1px solid var(--primary); width: 100%; margin-top: 14px; padding: 8px; border-radius: 6px; font-weight: 600; cursor: pointer;">🧠 Complete Deep-Dive Questionnaire</button>
     `;
-
     document.getElementById('complete-deep-dive-btn').addEventListener('click', async () => {
       modal.classList.remove('show');
       userAnswersMap = {};
@@ -1624,11 +1425,11 @@ async function showProfilePreview() {
   }
 }
 
+// SECTION 9.b: Edit Profile Modal & Unmatch Handlers
 async function openEditProfileModal() {
   const modal = document.getElementById('edit-profile-modal');
   const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
   if (!profile) return;
-
   document.getElementById('edit-full-name').value = profile.full_name || '';
   document.getElementById('edit-location').value = profile.location_name || '';
   document.getElementById('edit-intent').value = profile.intent || 'both';
@@ -1653,10 +1454,8 @@ async function openEditProfileModal() {
   
   tempLatitude = profile.latitude || null;
   tempLongitude = profile.longitude || null;
-
   editPhotosTemp = profile.images ? [...profile.images] : [];
   renderEditPhotoThumbnails();
-
   modal.classList.add('show');
 }
 
@@ -1664,14 +1463,12 @@ function openPartnerProfileModal(profile) {
   const modal = document.getElementById('partner-profile-modal');
   const bodyEl = document.getElementById('partner-profile-body');
   const intentText = profile.intent ? profile.intent.charAt(0).toUpperCase() + profile.intent.slice(1) : 'Both';
-
   let photosHTML = '';
   if (profile.images && profile.images.length > 0) {
     photosHTML = `<div style="display:flex; gap:6px; margin: 10px 0; overflow-x:auto;">`;
     profile.images.forEach(u => { photosHTML += `<img src="${u}" style="width:60px; height:60px; object-fit:cover; border-radius:6px;" />`; });
     photosHTML += `</div>`;
   }
-
   bodyEl.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
       <div>
@@ -1692,15 +1489,12 @@ function openPartnerProfileModal(profile) {
       🌱 Intent: <strong>${escapeHTML(intentText)}</strong>
     </div>
   `;
-
   modal.classList.add('show');
 }
 
 async function unmatchCurrentConnection() {
   if (!activeChatConnectionId) return;
-
   const { error } = await supabaseClient.from('connections').delete().eq('id', activeChatConnectionId);
-
   if (error) {
     alert('Error unmatching: ' + error.message);
   } else {
@@ -1712,19 +1506,18 @@ async function unmatchCurrentConnection() {
   }
 }
 
+// SECTION 9.c: Review, Reporting & Account Deletion
 function openReviewModal(connection, profile) {
   currentReviewConnection = connection;
   const reviewModal = document.getElementById('review-modal');
   const bodyEl = document.getElementById('review-profile-body');
   const intentText = profile.intent ? profile.intent.charAt(0).toUpperCase() + profile.intent.slice(1) : 'Both';
-
   let photosHTML = '';
   if (profile.images && profile.images.length > 0) {
     photosHTML = `<div style="display:flex; gap:6px; margin: 10px 0; overflow-x:auto;">`;
     profile.images.forEach(u => { photosHTML += `<img src="${u}" style="width:60px; height:60px; object-fit:cover; border-radius:6px;" />`; });
     photosHTML += `</div>`;
   }
-
   bodyEl.innerHTML = `
     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
       <div>
@@ -1745,7 +1538,6 @@ function openReviewModal(connection, profile) {
       🌱 Intent: <strong>${escapeHTML(intentText)}</strong>
     </div>
   `;
-
   reviewModal.classList.add('show');
 }
 
