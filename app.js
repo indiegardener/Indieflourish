@@ -671,25 +671,28 @@ async function loadQuestionnaire(isDeepDive = false) {
   
   container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">Loading questionnaire...</p>';
   
-  let query = supabaseClient.from('questions').select('*');
-  if (isDeepDive) {
-    query = query.eq('is_deep_dive', true);
-  } else {
-    query = query.or('is_deep_dive.is.null,is_deep_dive.eq.false');
-  }
-  let { data: questions, error } = await query.order('id', { ascending: true });
+  // Fetch questions cleanly without complex PostgREST filters
+  let { data: questions, error } = await supabaseClient
+    .from('questions')
+    .select('*')
+    .order('id', { ascending: true });
   
-  if ((error || !questions || !questions.length) && isDeepDive) {
-    const fallbackQuery = await supabaseClient.from('questions').select('*').order('id', { ascending: true });
-    questions = fallbackQuery.data;
-    error = fallbackQuery.error;
-  }
   if (error || !questions || !questions.length) {
     container.innerHTML = '<p style="text-align: center; color: var(--accent);">Unable to load questions.</p>';
     return;
   }
+  
+  // Filter for onboarding vs deep-dive
+  questions = questions.filter(q => isDeepDive ? q.is_deep_dive === true : !q.is_deep_dive);
+  
+  if (!questions.length) {
+    const fallbackQuery = await supabaseClient.from('questions').select('*').order('id', { ascending: true });
+    questions = fallbackQuery.data || [];
+  }
+
   quizQuestions = questions;
   container.innerHTML = isDeepDive ? '<h3 style="color:var(--primary); margin-bottom:12px;">Deep-Dive Profile Questionnaire</h3>' : '';
+  
   questions.forEach((q, idx) => {
     if (!userAnswersMap[q.id]) {
       userAnswersMap[q.id] = { answer: null, acceptable: [] };
@@ -702,12 +705,14 @@ async function loadQuestionnaire(isDeepDive = false) {
     card.style.borderRadius = '12px';
     card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
     
+    // 1. Render user's own single-select answer options
     let ownOptionsHTML = '';
     q.options.forEach(opt => {
       const isSelected = userAnswersMap[q.id].answer === opt.id ? 'selected' : '';
       ownOptionsHTML += `<button type="button" class="option-btn ${isSelected}" data-qid="${q.id}" data-optid="${opt.id}">${opt.label}</button>`;
     });
     
+    // 2. Render multi-select checkboxes for acceptable match answers
     let acceptableOptionsHTML = '';
     q.options.forEach(opt => {
       const isChecked = userAnswersMap[q.id].acceptable.includes(opt.id) ? 'checked' : '';
@@ -718,6 +723,7 @@ async function loadQuestionnaire(isDeepDive = false) {
         </label>
       `;
     });
+
     card.innerHTML = `
       <span class="badge" style="font-size: 0.7rem; background: var(--primary-light); color: var(--primary); padding: 3px 8px; border-radius: 4px; font-weight: 600;">${q.category || 'Lifestyle'}</span>
       <p style="font-weight: 600; font-size: 0.95rem; margin: 8px 0 12px 0; color: var(--text-main);">${idx + 1}. ${q.question_text}</p>
@@ -726,6 +732,7 @@ async function loadQuestionnaire(isDeepDive = false) {
         <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Your Answer:</div>
         <div>${ownOptionsHTML}</div>
       </div>
+
       <div style="background: #faf7f5; padding: 10px 12px; border-radius: 8px; border-left: 3px solid var(--primary);">
         <div style="font-size: 0.75rem; font-weight: 700; color: var(--primary); text-transform: uppercase; margin-bottom: 4px;">Acceptable answers from your match:</div>
         <div>${acceptableOptionsHTML}</div>
@@ -734,6 +741,7 @@ async function loadQuestionnaire(isDeepDive = false) {
     container.appendChild(card);
   });
 
+  // Event listener: Single-select for personal answer
   document.querySelectorAll('.option-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const qid = e.target.getAttribute('data-qid');
@@ -744,6 +752,7 @@ async function loadQuestionnaire(isDeepDive = false) {
       if (!userAnswersMap[qid]) userAnswersMap[qid] = { answer: null, acceptable: [] };
       userAnswersMap[qid].answer = optid;
       
+      // Smart default: If acceptable list is empty, include own chosen option
       if (userAnswersMap[qid].acceptable.length === 0) {
         userAnswersMap[qid].acceptable.push(optid);
         const matchingChk = document.querySelector(`.acceptable-chk[data-qid="${qid}"][data-optid="${optid}"]`);
@@ -753,6 +762,7 @@ async function loadQuestionnaire(isDeepDive = false) {
     });
   });
 
+  // Event listener: Multi-select checkboxes for acceptable match answers
   document.querySelectorAll('.acceptable-chk').forEach(chk => {
     chk.addEventListener('change', (e) => {
       const qid = e.target.getAttribute('data-qid');
@@ -769,6 +779,7 @@ async function loadQuestionnaire(isDeepDive = false) {
       }
     });
   });
+
   updateQuizSubmitButtonState();
 }
 
