@@ -291,6 +291,7 @@ button:hover { background-color: #233a30; }
   font-size: 0.85rem;
   color: var(--text-main);
   text-align: left;
+  width: 100%;
 }
 
 .acceptable-option-checkbox {
@@ -302,6 +303,7 @@ button:hover { background-color: #233a30; }
 .acceptable-option-text {
   line-height: 1.4;
   text-align: left;
+  flex-grow: 1;
 }
 .option-btn.selected {
   border-color: var(--primary);
