@@ -270,7 +270,39 @@ button:hover { background-color: #233a30; }
   cursor: pointer;
   font-weight: normal;
 }
+/* =========================================================================
+   QUESTIONNAIRE ACCEPTABLE OPTIONS STYLING
+   ========================================================================= */
+.acceptable-container-box {
+  background: #faf7f5;
+  padding: 14px;
+  border-radius: 8px;
+  border-left: 3px solid var(--primary);
+  text-align: left;
+  margin-top: 12px;
+}
 
+.acceptable-option-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 10px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--text-main);
+  text-align: left;
+}
+
+.acceptable-option-checkbox {
+  margin-top: 2px;
+  accent-color: var(--primary);
+  flex-shrink: 0;
+}
+
+.acceptable-option-text {
+  line-height: 1.4;
+  text-align: left;
+}
 .option-btn.selected {
   border-color: var(--primary);
   background-color: var(--primary-light);
