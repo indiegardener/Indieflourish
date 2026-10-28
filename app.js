@@ -544,19 +544,25 @@ if (backToQuizBtn) {
    SECTION 5: PROFILE & ONBOARDING MANAGEMENT
    ========================================================================= */
 
-// SECTION 5.a: Initial Profile Saving
+// SECTION 5.a: Saves initial profile data during onboarding and initiates questionnaire
 async function triggerSaveProfile() {
   const fullName = document.getElementById('full-name').value.trim();
   const location = document.getElementById('location').value.trim();
   const intent = document.getElementById('intent').value;
   const bio = document.getElementById('bio').value.trim();
   const termsAgreed = document.getElementById('terms-agree-checkbox').checked;
+  
+  // Retrieve and validate Date of Birth
+  const dobVal = document.getElementById('dob').value;
+  if (!dobVal) {
+    alert('Please enter your date of birth.');
+    return;
+  }
+
   if (!fullName || !location) {
     alert('Please fill out your name and location.');
     return;
   }
-   
-   
   if (!termsAgreed) {
     alert('You must agree to the Terms & Conditions to create an account.');
     return;
@@ -570,17 +576,20 @@ async function triggerSaveProfile() {
       return;
     }
   }
+  
   const saveBtn = document.getElementById('save-profile-btn');
   if (saveBtn) {
     saveBtn.disabled = true;
     saveBtn.textContent = 'Saving Profile...';
   }
+
   const profileData = {
     id: currentUser.id,
     full_name: fullName,
     location_name: location,
     intent: intent,
     bio: bio,
+    dob: dobVal,
     gender: document.getElementById('gender').value,
     pronouns: document.getElementById('pronouns').value.trim(),
     orientation: document.getElementById('orientation').value,
@@ -600,11 +609,14 @@ async function triggerSaveProfile() {
     longitude: tempLongitude,
     updated_at: new Date().toISOString()
   };
+
   const { error } = await supabaseClient.from('profiles').upsert([profileData], { onConflict: 'id' });
+  
   if (saveBtn) {
     saveBtn.disabled = false;
     saveBtn.textContent = 'Save Profile & Begin Quiz';
   }
+  
   if (error) {
     alert('Error saving profile: ' + error.message);
   } else {
@@ -1563,6 +1575,7 @@ async function openEditProfileModal() {
   const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
   if (!profile) return;
   document.getElementById('edit-full-name').value = profile.full_name || '';
+  document.getElementById('edit-dob').value = profile.dob || ''; 
   document.getElementById('edit-location').value = profile.location_name || '';
   document.getElementById('edit-intent').value = profile.intent || 'both';
   document.getElementById('edit-bio').value = profile.bio || '';
