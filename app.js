@@ -539,6 +539,29 @@ if (backToQuizBtn) {
   }
 });
 
+// Section 4.d Feature: Chat Back Button Handler (Returns to Connections & Matches view)
+  const backToConnectionsBtn = document.getElementById('back-to-connections-btn');
+  if (backToConnectionsBtn) {
+    backToConnectionsBtn.addEventListener('click', async () => {
+      showSection('dashboard-section');
+      
+      // Ensure the Connections & Matches tab is active on the dashboard
+      const discoverTab = document.getElementById('tab-discover-btn');
+      const connectionsTab = document.getElementById('tab-connections-btn');
+      const viewDiscover = document.getElementById('view-discover');
+      const viewConnections = document.getElementById('view-connections');
+      
+      if (discoverTab && connectionsTab) {
+        discoverTab.classList.remove('active');
+        connectionsTab.classList.add('active');
+        if (viewDiscover) viewDiscover.style.display = 'none';
+        if (viewConnections) viewConnections.style.display = 'flex';
+      }
+      
+      // Refresh the connections list
+      await loadConnectionsList();
+    });
+  }
 
 /* =========================================================================
    SECTION 5: PROFILE & ONBOARDING MANAGEMENT
