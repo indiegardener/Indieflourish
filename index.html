@@ -72,6 +72,12 @@
       <label for="full-name">Full Name or Preferred Name *</label>
       <input type="text" id="full-name" placeholder="e.g. Shashi" required />
    </div>
+
+<div class="form-group">
+  <label for="dob">Date of Birth *</label>
+  <input type="date" id="dob" required />
+</div>
+    
     <div class="form-group">
       <label for="location">Location (GPS Auto-Detected) *</label>
       <div style="display: flex; gap: 10px; align-items: center;">
@@ -376,6 +382,16 @@
         <option value="100" label="99+">100</option>
       </datalist>
     </div>
+
+<div class="form-group" style="margin-top: 14px;">
+  <label style="font-weight: 600; margin-bottom: 6px; display: block;">Preferred Age Range</label>
+  <div style="display: flex; gap: 10px; align-items: center;">
+    <input type="number" id="pref-min-age" min="18" max="100" value="18" placeholder="Min" style="width: 50%; padding: 8px; border-radius: 6px; border: 1px solid var(--border);" />
+    <span style="color: var(--text-muted);">to</span>
+    <input type="number" id="pref-max-age" min="18" max="100" value="99" placeholder="Max" style="width: 50%; padding: 8px; border-radius: 6px; border: 1px solid var(--border);" />
+  </div>
+</div>
+    
 
     <div class="form-group">
       <label style="font-weight: 600; margin-bottom: 6px; display: block;">Preferred Genders</label>
