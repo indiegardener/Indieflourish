@@ -671,23 +671,25 @@ async function loadQuestionnaire(isDeepDive = false) {
   
   container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">Loading questionnaire...</p>';
   
-  let { data: questions, error } = await supabaseClient
-    .from('questions')
-    .select('*')
-    .order('id', { ascending: true });
+  let query = supabaseClient.from('questions').select('*');
+  if (isDeepDive) {
+    query = query.eq('is_deep_dive', true);
+  } else {
+    query = query.or('is_deep_dive.is.null,is_deep_dive.eq.false');
+  }
+  let { data: questions, error } = await query.order('id', { ascending: true });
   
+  // Fallback: if deep dive query returns nothing, load all questions to prevent load errors
+  if ((error || !questions || !questions.length) && isDeepDive) {
+    const fallbackQuery = await supabaseClient.from('questions').select('*').order('id', { ascending: true });
+    questions = fallbackQuery.data;
+    error = fallbackQuery.error;
+  }
   if (error || !questions || !questions.length) {
     container.innerHTML = '<p style="text-align: center; color: var(--accent);">Unable to load questions.</p>';
     return;
   }
   
-  questions = questions.filter(q => isDeepDive ? q.is_deep_dive === true : !q.is_deep_dive);
-  
-  if (!questions.length) {
-    const fallbackQuery = await supabaseClient.from('questions').select('*').order('id', { ascending: true });
-    questions = fallbackQuery.data || [];
-  }
-
   quizQuestions = questions;
   container.innerHTML = isDeepDive ? '<h3 style="color:var(--primary); margin-bottom:12px;">Deep-Dive Profile Questionnaire</h3>' : '';
   
@@ -697,11 +699,6 @@ async function loadQuestionnaire(isDeepDive = false) {
     }
     const card = document.createElement('div');
     card.className = 'question-card';
-    card.style.marginBottom = '20px';
-    card.style.padding = '16px';
-    card.style.background = '#fff';
-    card.style.borderRadius = '12px';
-    card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
     
     // 1. Render personal single-select option buttons
     let ownOptionsHTML = '';
@@ -710,14 +707,14 @@ async function loadQuestionnaire(isDeepDive = false) {
       ownOptionsHTML += `<button type="button" class="option-btn ${isSelected}" data-qid="${q.id}" data-optid="${opt.id}">${opt.label}</button>`;
     });
     
-    // 2. Render clean, robust rows for acceptable partner answers
+    // 2. Render clean rows for acceptable partner answers using CSS classes
     let acceptableOptionsHTML = '';
     q.options.forEach(opt => {
       const isChecked = userAnswersMap[q.id].acceptable.includes(opt.id) ? 'checked' : '';
       acceptableOptionsHTML += `
-        <label style="display: flex; align-items: flex-start; gap: 10px; margin-top: 10px; cursor: pointer; font-size: 0.85rem; color: var(--text-main); text-align: left;">
-          <input type="checkbox" class="acceptable-chk" data-qid="${q.id}" data-optid="${opt.id}" ${isChecked} style="margin-top: 2px; accent-color: var(--primary); flex-shrink: 0;" />
-          <span style="line-height: 1.4;">${opt.label}</span>
+        <label class="acceptable-option-row">
+          <input type="checkbox" class="acceptable-chk acceptable-option-checkbox" data-qid="${q.id}" data-optid="${opt.id}" ${isChecked} />
+          <span class="acceptable-option-text">${opt.label}</span>
         </label>
       `;
     });
@@ -731,7 +728,7 @@ async function loadQuestionnaire(isDeepDive = false) {
         <div>${ownOptionsHTML}</div>
       </div>
 
-      <div style="background: #faf7f5; padding: 14px; border-radius: 8px; border-left: 3px solid var(--primary); text-align: left;">
+      <div class="acceptable-container-box">
         <div style="font-size: 0.75rem; font-weight: 700; color: var(--primary); text-transform: uppercase; margin-bottom: 8px;">Acceptable answers from your match:</div>
         <div>${acceptableOptionsHTML}</div>
       </div>
@@ -750,6 +747,7 @@ async function loadQuestionnaire(isDeepDive = false) {
       if (!userAnswersMap[qid]) userAnswersMap[qid] = { answer: null, acceptable: [] };
       userAnswersMap[qid].answer = optid;
       
+      // Automatically include own answer in acceptable list by default if empty
       if (userAnswersMap[qid].acceptable.length === 0) {
         userAnswersMap[qid].acceptable.push(optid);
         const matchingChk = document.querySelector(`.acceptable-chk[data-qid="${qid}"][data-optid="${optid}"]`);
