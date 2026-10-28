@@ -555,6 +555,8 @@ async function triggerSaveProfile() {
     alert('Please fill out your name and location.');
     return;
   }
+   
+   
   if (!termsAgreed) {
     alert('You must agree to the Terms & Conditions to create an account.');
     return;
@@ -830,12 +832,24 @@ function updateQuizSubmitButtonState() {
    SECTION 7: DASHBOARD, DISCOVERY FEED & ADVANCED MATCHING ALGORITHM
    ========================================================================= */
 
-// SECTION 7.a: Feed Data Fetching, Distance & Tiered Match Sorting
+// Helper: Calculate age from Date of Birth string
+function calculateAge(dobString) {
+  if (!dobString) return 26; // Default fallback age
+  const birthDate = new Date(dobString);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+}
+
+// Loads discovery feed, applies distance, age, gender, and intent filters, and executes tiered sorting
 async function loadDashboard() {
   showSection('dashboard-section');
   const deckContainer = document.getElementById('deck-container');
   if (!deckContainer) return;
-  
   deckContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding-top: 100px;">Finding nearby profiles...</p>';
   
   const { data: myProfile } = await supabaseClient
@@ -848,7 +862,9 @@ async function loadDashboard() {
   const myLon = myProfile ? myProfile.longitude : null;
   const preferredGenders = myProfile?.preferred_genders || ['Man', 'Woman', 'Non-binary', 'Other'];
   const preferredIntents = myProfile?.preferred_intents || ['both', 'platonic', 'romantic'];
-  const maxAllowedDistance = myProfile?.max_distance || 500; // Respects user preference slider
+  const maxAllowedDistance = myProfile?.max_distance !== undefined ? myProfile.max_distance : 100;
+  const minAllowedAge = myProfile?.pref_min_age !== undefined ? myProfile.pref_min_age : 18;
+  const maxAllowedAge = myProfile?.pref_max_age !== undefined ? myProfile.pref_max_age : 99;
 
   // Fetch current user's answers and acceptable choices for matching
   const { data: myAnswers } = await supabaseClient
@@ -866,7 +882,6 @@ async function loadDashboard() {
     });
   }
 
-  // Fetch existing connections to exclude from feed
   const { data: existingConnections } = await supabaseClient
     .from('connections')
     .select('requester_id, receiver_id, status, created_at')
@@ -900,7 +915,7 @@ async function loadDashboard() {
     return;
   }
 
-  // Fetch all user answers to compute reciprocal compatibility scores
+  // Fetch all user answers and acceptable option arrays to compute compatibility scores
   const { data: allAnswers } = await supabaseClient.from('user_answers').select('user_id, question_id, selected_option_id, acceptable_option_ids');
   
   const profilesAnswersMap = {};
@@ -915,7 +930,7 @@ async function loadDashboard() {
     });
   }
 
-  // Filter profiles based on gender, relationship intent, and max distance preference
+  // Filter profiles based on gender, intent, distance, and age range preferences
   let filteredProfiles = profiles.filter(p => {
     if (excludedUserIds.has(p.id)) return false;
     const pGender = p.gender || 'Other';
@@ -923,12 +938,16 @@ async function loadDashboard() {
     const pIntent = p.intent || 'both';
     if (preferredIntents.length > 0 && !preferredIntents.includes(pIntent) && pIntent !== 'both') return false;
     
-    // Calculate distance using Haversine formula
+    // Age filter check
+    const pAge = calculateAge(p.dob);
+    if (pAge < minAllowedAge || pAge > maxAllowedAge) return false;
+
+    // Distance calculation using Haversine formula
     const distance = calculateDistance(myLat, myLon, p.latitude, p.longitude);
     p.distanceKm = distance;
     
-    // Enforce max distance preference
-    if (maxAllowedDistance < 500 && distance > maxAllowedDistance) return false;
+    // Max distance filter check (if slider is under 100, enforce limit)
+    if (maxAllowedDistance < 100 && distance > maxAllowedDistance) return false;
     
     return true;
   });
@@ -941,7 +960,6 @@ async function loadDashboard() {
     
     let mutuallyCompatibleCount = 0;
     let totalCompared = 0;
-    
     Object.keys(myAnswersLookup).forEach(qid => {
       const myAns = myAnswersLookup[qid]?.answer;
       const myAcceptable = myAnswersLookup[qid]?.acceptable || [myAns];
@@ -967,24 +985,19 @@ async function loadDashboard() {
   });
 
   // Tiered Progressive Expansion Sort:
-  // 1. Group candidates into 5km distance tiers (Tier 0: 0-5km, Tier 1: 5-10km, Tier 2: 10-15km, etc.)
+  // 1. Group candidates into 5km distance tiers (Tier 0: 0-5km, Tier 1: 5-10km, etc.)
   // 2. Prioritize closer distance tiers first.
   // 3. Within each exact 5km tier, sort by highest match score descending.
   filteredProfiles.sort((a, b) => {
     const tierA = Math.floor((a.distanceKm || 0) / 5);
     const tierB = Math.floor((b.distanceKm || 0) / 5);
 
-    // Prioritize closer 5km distance brackets first
     if (tierA !== tierB) {
       return tierA - tierB;
     }
-
-    // Within the same 5km bracket, sort by highest match score descending
     if (b.matchScore !== a.matchScore) {
       return b.matchScore - a.matchScore;
     }
-
-    // Fallback to absolute closest distance if match scores are identical
     return (a.distanceKm || 0) - (b.distanceKm || 0);
   });
 
@@ -996,7 +1009,6 @@ async function loadDashboard() {
   renderDeck();
 }
 
-// SECTION 7.b: Active Chat Limits & Unread Message Monitors
 async function updateActiveChatCount() {
   const { data: activeMatches } = await supabaseClient
     .from('connections')
@@ -1032,43 +1044,49 @@ async function checkForUnreadMessages() {
   }
 }
 
-// SECTION 7.c: Bumble-Style Scroll Feed Renderer & Swipe Logic
+// Bumble-Style Continuous Scroll Feed Renderer
 function renderDeck() {
   const deckContainer = document.getElementById('deck-container');
   deckContainer.innerHTML = '';
   const oldBar = document.getElementById('sticky-action-bar');
   if (oldBar) oldBar.remove();
+  
   if (currentCardIndex >= availableProfiles.length) {
     deckContainer.innerHTML = `
       <div style="text-align: center; padding-top: 140px;">
         <p style="font-weight: 600; font-size: 1.1rem; color: var(--primary);">All caught up!</p>
         <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 8px;">
-          You have viewed all available profiles. Check back later for new members!
+          You have viewed all available profiles within your filters. Check back later or adjust your preferences!
         </p>
       </div>
     `;
     return;
   }
+  
   const profile = availableProfiles[currentCardIndex];
   const matchPercentage = profile.matchScore || 85;
   const intentText = profile.intent ? profile.intent.charAt(0).toUpperCase() + profile.intent.slice(1) : 'Both';
+  const ageDisplay = profile.dob ? `, ${calculateAge(profile.dob)}` : '';
+  
   let streamHTML = '';
   streamHTML += `
     <div class="profile-feed-card">
       <div class="feed-header-info">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
           <div>
-            <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">${escapeHTML(profile.full_name || 'Anonymous')}</div>
-            <div style="font-size: 0.9rem; color: var(--text-muted); margin-top: 2px;">📍 ${escapeHTML(profile.location_name || 'Location not specified')} (${profile.distanceKm ? Math.round(profile.distanceKm) + ' km away' : ''})</div>
+            <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary);">${escapeHTML(profile.full_name || 'Anonymous')}${ageDisplay}</div>
+            <div style="font-size: 0.9rem; color: var(--text-muted); margin-top: 2px;">📍 ${escapeHTML(profile.location_name || 'Location not specified')} (${profile.distanceKm !== undefined ? Math.round(profile.distanceKm) + ' km away' : ''})</div>
           </div>
           <div class="card-match-badge" style="font-size: 0.85rem; padding: 6px 12px;">${matchPercentage}% Match</div>
         </div>
       </div>
   `;
+  
   const images = profile.images || [];
   if (images.length > 0) {
     streamHTML += `<img src="${images[0]}" class="feed-photo" alt="Profile Photo" />`;
   }
+  
   if (profile.bio && profile.bio.trim() !== '') {
     streamHTML += `
       <div class="feed-bio-box">
@@ -1077,6 +1095,7 @@ function renderDeck() {
       </div>
     `;
   }
+  
   const detailMappings = [
     { key: 'gender', icon: '👤' },
     { key: 'pronouns', icon: '🗣️' },
@@ -1094,6 +1113,7 @@ function renderDeck() {
     { key: 'children', icon: '👶' },
     { key: 'pets', icon: '🐾' }
   ];
+  
   let tagsHTML = '';
   detailMappings.forEach(f => {
     let val = profile[f.key];
@@ -1105,6 +1125,7 @@ function renderDeck() {
       tagsHTML += `<span class="detail-tag">${f.icon} ${formattedVal}</span>`;
     }
   });
+  
   if (tagsHTML) {
     streamHTML += `
       <div class="feed-section-box">
@@ -1113,9 +1134,11 @@ function renderDeck() {
       </div>
     `;
   }
+  
   if (images.length > 1) {
     streamHTML += `<img src="${images[1]}" class="feed-photo" alt="Profile Photo" />`;
   }
+  
   if (profile.prompt_question && profile.prompt_answer && profile.prompt_answer.trim() !== '') {
     streamHTML += `
       <div class="feed-prompt-box">
@@ -1124,12 +1147,14 @@ function renderDeck() {
       </div>
     `;
   }
+  
   if (images.length > 2) {
     streamHTML += `<img src="${images[2]}" class="feed-photo" alt="Profile Photo" />`;
   }
   if (images.length > 3) {
     streamHTML += `<img src="${images[3]}" class="feed-photo" alt="Profile Photo" />`;
   }
+  
   streamHTML += `
       <div style="padding: 16px; text-align: center;">
         <div class="card-intent" style="margin-bottom: 12px;">🌱 Intent: <strong>${escapeHTML(intentText)}</strong></div>
@@ -1138,6 +1163,7 @@ function renderDeck() {
       </div>
     </div>
   `;
+  
   deckContainer.innerHTML = streamHTML;
   const actionBar = document.createElement('div');
   actionBar.className = 'sticky-action-bar';
@@ -1157,62 +1183,10 @@ function renderDeck() {
   }
 }
 
-async function swipeCurrentCard(direction) {
-  const targetProfile = availableProfiles[currentCardIndex];
-  if (targetProfile) {
-    if (direction === 'right') {
-      await handleRightSwipe(targetProfile);
-    } else if (direction === 'left') {
-      await handleLeftSwipe(targetProfile);
-    }
-  }
-  currentCardIndex++;
-  renderDeck();
-}
-
-async function handleRightSwipe(targetProfile) {
-  const { data: incomingRequest } = await supabaseClient
-    .from('connections')
-    .select('*')
-    .eq('requester_id', targetProfile.id)
-    .eq('receiver_id', currentUser.id)
-    .single();
-  if (incomingRequest) {
-    const { error } = await supabaseClient
-      .from('connections')
-      .update({ status: 'accepted', updated_at: new Date().toISOString() })
-      .eq('id', incomingRequest.id);
-    if (!error) {
-      if (window.gtag) {
-        gtag('event', 'match_created', { method: 'swipe_right' });
-      }
-      alert(`🎉 It's a Match! You and ${targetProfile.full_name} have both swiped right. Your active chat space is open!`);
-      await updateActiveChatCount();
-    }
-  } else {
-    const { error } = await supabaseClient
-      .from('connections')
-      .upsert([
-        { requester_id: currentUser.id, receiver_id: targetProfile.id, status: 'pending' }
-      ], { onConflict: 'requester_id,receiver_id' });
-    if (!error && window.gtag) {
-      gtag('event', 'connection_requested', { method: 'swipe_right' });
-    }
-  }
-}
-
-async function handleLeftSwipe(targetProfile) {
-  await supabaseClient
-    .from('connections')
-    .upsert([
-      { requester_id: currentUser.id, receiver_id: targetProfile.id, status: 'rejected', created_at: new Date().toISOString() }
-    ], { onConflict: 'requester_id,receiver_id' });
-}
-
-// SECTION 7.d: Preferences Modal & Note-Connect Handlers
+// Opens and syncs Discovery Preferences modal states
 async function openPreferencesModal() {
   const modal = document.getElementById('preferences-modal');
-  const { data: profile } = await supabaseClient.from('profiles').select('preferred_genders, preferred_intents').eq('id', currentUser.id).single();
+  const { data: profile } = await supabaseClient.from('profiles').select('preferred_genders, preferred_intents, max_distance, pref_min_age, pref_max_age').eq('id', currentUser.id).single();
   
   if (profile) {
     const genders = profile.preferred_genders || ['Man', 'Woman', 'Non-binary', 'Other'];
@@ -1221,10 +1195,31 @@ async function openPreferencesModal() {
     });
     const intents = profile.preferred_intents || ['both'];
     document.getElementById('pref-intent-select').value = intents.length === 1 ? intents[0] : 'all';
+
+    // Distance slider & live text updates
+    const maxDist = profile.max_distance !== undefined ? profile.max_distance : 100;
+    const slider = document.getElementById('pref-max-distance');
+    const output = document.getElementById('distance-output');
+    if (slider && output) {
+      slider.value = maxDist;
+      output.innerText = maxDist >= 100 ? '99+ km' : maxDist + ' km';
+      
+      slider.oninput = (e) => {
+        const val = parseInt(e.target.value);
+        output.innerText = val >= 100 ? '99+ km' : val + ' km';
+      };
+    }
+
+    // Age preferences inputs
+    if (document.getElementById('pref-min-age')) {
+      document.getElementById('pref-min-age').value = profile.pref_min_age !== undefined ? profile.pref_min_age : 18;
+      document.getElementById('pref-max-age').value = profile.pref_max_age !== undefined ? profile.pref_max_age : 99;
+    }
   }
   modal.classList.add('show');
 }
 
+// Saves user discovery preferences to Supabase and reloads feed
 async function saveUserPreferences() {
   const selectedGenders = [];
   document.querySelectorAll('#pref-gender-checkboxes input:checked').forEach(chk => {
@@ -1232,10 +1227,18 @@ async function saveUserPreferences() {
   });
   const intentVal = document.getElementById('pref-intent-select').value;
   const selectedIntents = intentVal === 'all' ? ['both', 'platonic', 'romantic'] : [intentVal];
+  const maxDistVal = parseInt(document.getElementById('pref-max-distance').value) || 100;
+  const minAge = parseInt(document.getElementById('pref-min-age').value) || 18;
+  const maxAge = parseInt(document.getElementById('pref-max-age').value) || 99;
+
   const { error } = await supabaseClient.from('profiles').update({
     preferred_genders: selectedGenders,
-    preferred_intents: selectedIntents
+    preferred_intents: selectedIntents,
+    max_distance: maxDistVal,
+    pref_min_age: minAge,
+    pref_max_age: maxAge
   }).eq('id', currentUser.id);
+  
   if (error) {
     alert('Error saving preferences: ' + error.message);
   } else {
@@ -1296,6 +1299,58 @@ async function handleRightSwipeWithNote(targetProfile, noteText) {
   }
   currentCardIndex++;
   renderDeck();
+}
+
+async function swipeCurrentCard(direction) {
+  const targetProfile = availableProfiles[currentCardIndex];
+  if (targetProfile) {
+    if (direction === 'right') {
+      await handleRightSwipe(targetProfile);
+    } else if (direction === 'left') {
+      await handleLeftSwipe(targetProfile);
+    }
+  }
+  currentCardIndex++;
+  renderDeck();
+}
+
+async function handleRightSwipe(targetProfile) {
+  const { data: incomingRequest } = await supabaseClient
+    .from('connections')
+    .select('*')
+    .eq('requester_id', targetProfile.id)
+    .eq('receiver_id', currentUser.id)
+    .single();
+  if (incomingRequest) {
+    const { error } = await supabaseClient
+      .from('connections')
+      .update({ status: 'accepted', updated_at: new Date().toISOString() })
+      .eq('id', incomingRequest.id);
+    if (!error) {
+      if (window.gtag) {
+        gtag('event', 'match_created', { method: 'swipe_right' });
+      }
+      alert(`🎉 It's a Match! You and ${targetProfile.full_name} have both swiped right. Your active chat space is open!`);
+      await updateActiveChatCount();
+    }
+  } else {
+    const { error } = await supabaseClient
+      .from('connections')
+      .upsert([
+        { requester_id: currentUser.id, receiver_id: targetProfile.id, status: 'pending' }
+      ], { onConflict: 'requester_id,receiver_id' });
+    if (!error && window.gtag) {
+      gtag('event', 'connection_requested', { method: 'swipe_right' });
+    }
+  }
+}
+
+async function handleLeftSwipe(targetProfile) {
+  await supabaseClient
+    .from('connections')
+    .upsert([
+      { requester_id: currentUser.id, receiver_id: targetProfile.id, status: 'rejected', created_at: new Date().toISOString() }
+    ], { onConflict: 'requester_id,receiver_id' });
 }
 
 
