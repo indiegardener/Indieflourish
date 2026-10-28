@@ -671,25 +671,25 @@ async function loadQuestionnaire(isDeepDive = false) {
   
   container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">Loading questionnaire...</p>';
   
-  // Fetch all questions cleanly without complex PostgREST query filters
-  let { data: questions, error } = await supabaseClient
-    .from('questions')
-    .select('*')
-    .order('id', { ascending: true });
+  let query = supabaseClient.from('questions').select('*');
+  if (isDeepDive) {
+    query = query.eq('is_deep_dive', true);
+  } else {
+    query = query.or('is_deep_dive.is.null,is_deep_dive.eq.false');
+  }
+  let { data: questions, error } = await query.order('id', { ascending: true });
   
+  // Fallback: if deep dive query returns nothing, load all questions to prevent load errors
+  if ((error || !questions || !questions.length) && isDeepDive) {
+    const fallbackQuery = await supabaseClient.from('questions').select('*').order('id', { ascending: true });
+    questions = fallbackQuery.data;
+    error = fallbackQuery.error;
+  }
   if (error || !questions || !questions.length) {
     container.innerHTML = '<p style="text-align: center; color: var(--accent);">Unable to load questions.</p>';
     return;
   }
   
-  // Robust JavaScript filtering for onboarding vs deep-dive questions
-  questions = questions.filter(q => isDeepDive ? q.is_deep_dive === true : !q.is_deep_dive);
-  
-  if (!questions.length) {
-    const fallbackQuery = await supabaseClient.from('questions').select('*').order('id', { ascending: true });
-    questions = fallbackQuery.data || [];
-  }
-
   quizQuestions = questions;
   container.innerHTML = isDeepDive ? '<h3 style="color:var(--primary); margin-bottom:12px;">Deep-Dive Profile Questionnaire</h3>' : '';
   
@@ -707,7 +707,7 @@ async function loadQuestionnaire(isDeepDive = false) {
       ownOptionsHTML += `<button type="button" class="option-btn ${isSelected}" data-qid="${q.id}" data-optid="${opt.id}">${opt.label}</button>`;
     });
     
-    // 2. Render clean rows for acceptable partner answers using our new CSS classes
+    // 2. Render clean rows for acceptable partner answers using our dedicated CSS classes
     let acceptableOptionsHTML = '';
     q.options.forEach(opt => {
       const isChecked = userAnswersMap[q.id].acceptable.includes(opt.id) ? 'checked' : '';
