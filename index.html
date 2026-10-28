@@ -368,19 +368,20 @@
     <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 16px;">Customize who appears in your Discover feed.</p>
 
 
-    <div class="form-group" style="margin-bottom: 16px;">
-      <div style="display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 6px;">
+<!-- Replace or add inside #preferences-modal in index.html -->
+    <div class="form-group" style="margin-bottom: 18px;">
+      <div style="display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 8px;">
         <label style="margin-bottom: 0;">Distance</label>
-        <span id="distance-output" style="color: var(--primary);">100 km</span>
+        <span id="distance-output" style="color: var(--primary); font-weight: 700;">100 km</span>
       </div>
-      <input type="range" id="pref-max-distance" min="10" max="100" step="10" value="100" list="distance-ticks" style="width: 100%; accent-color: var(--primary);" />
-      <datalist id="distance-ticks" style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;">
-        <option value="10" label="10">10</option>
-        <option value="30" label="30">30</option>
-        <option value="50" label="50">50</option>
-        <option value="75" label="75">75</option>
-        <option value="100" label="99+">100</option>
-      </datalist>
+      <input type="range" id="pref-max-distance" min="10" max="100" step="5" value="100" style="width: 100%; accent-color: var(--primary); cursor: pointer;" />
+      <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-top: 4px; padding: 0 2px;">
+        <span>10 km</span>
+        <span>25 km</span>
+        <span>50 km</span>
+        <span>75 km</span>
+        <span>99+ km</span>
+      </div>
     </div>
 
 <div class="form-group" style="margin-top: 14px;">
