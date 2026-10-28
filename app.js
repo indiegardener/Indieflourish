@@ -830,26 +830,32 @@ function updateQuizSubmitButtonState() {
    SECTION 7: DASHBOARD, DISCOVERY FEED & ADVANCED MATCHING ALGORITHM
    ========================================================================= */
 
-// SECTION 7.a: Feed Data Fetching & Match Score Calculation
+// SECTION 7.a: Feed Data Fetching, Distance & Tiered Match Sorting
 async function loadDashboard() {
   showSection('dashboard-section');
   const deckContainer = document.getElementById('deck-container');
   if (!deckContainer) return;
+  
   deckContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding-top: 100px;">Finding nearby profiles...</p>';
+  
   const { data: myProfile } = await supabaseClient
     .from('profiles')
     .select('*')
     .eq('id', currentUser.id)
     .single();
+    
   const myLat = myProfile ? myProfile.latitude : null;
   const myLon = myProfile ? myProfile.longitude : null;
   const preferredGenders = myProfile?.preferred_genders || ['Man', 'Woman', 'Non-binary', 'Other'];
   const preferredIntents = myProfile?.preferred_intents || ['both', 'platonic', 'romantic'];
-  
+  const maxAllowedDistance = myProfile?.max_distance || 500; // Respects user preference slider
+
+  // Fetch current user's answers and acceptable choices for matching
   const { data: myAnswers } = await supabaseClient
     .from('user_answers')
     .select('question_id, selected_option_id, acceptable_option_ids')
     .eq('user_id', currentUser.id);
+    
   const myAnswersLookup = {};
   if (myAnswers) {
     myAnswers.forEach(a => { 
@@ -859,14 +865,18 @@ async function loadDashboard() {
       }; 
     });
   }
+
+  // Fetch existing connections to exclude from feed
   const { data: existingConnections } = await supabaseClient
     .from('connections')
     .select('requester_id, receiver_id, status, created_at')
     .or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
+    
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const excludedUserIds = new Set([currentUser.id]);
+  
   if (existingConnections) {
     existingConnections.forEach(c => {
       const otherId = c.requester_id === currentUser.id ? c.receiver_id : c.requester_id;
@@ -883,13 +893,16 @@ async function loadDashboard() {
       }
     });
   }
+
   const { data: profiles, error } = await supabaseClient.from('profiles').select('*');
   if (error || !profiles) {
     deckContainer.innerHTML = '<p style="text-align: center; color: var(--accent);">Error loading profiles.</p>';
     return;
   }
-  
+
+  // Fetch all user answers to compute reciprocal compatibility scores
   const { data: allAnswers } = await supabaseClient.from('user_answers').select('user_id, question_id, selected_option_id, acceptable_option_ids');
+  
   const profilesAnswersMap = {};
   const profilesAcceptableMap = {};
   if (allAnswers) {
@@ -902,15 +915,25 @@ async function loadDashboard() {
     });
   }
 
+  // Filter profiles based on gender, relationship intent, and max distance preference
   let filteredProfiles = profiles.filter(p => {
     if (excludedUserIds.has(p.id)) return false;
     const pGender = p.gender || 'Other';
     if (preferredGenders.length > 0 && !preferredGenders.includes(pGender)) return false;
     const pIntent = p.intent || 'both';
     if (preferredIntents.length > 0 && !preferredIntents.includes(pIntent) && pIntent !== 'both') return false;
+    
+    // Calculate distance using Haversine formula
+    const distance = calculateDistance(myLat, myLon, p.latitude, p.longitude);
+    p.distanceKm = distance;
+    
+    // Enforce max distance preference
+    if (maxAllowedDistance < 500 && distance > maxAllowedDistance) return false;
+    
     return true;
   });
 
+  // Calculate reciprocal match scores based on mutual acceptable options
   filteredProfiles = filteredProfiles.map(p => {
     let score = 75;
     const targetAnswers = profilesAnswersMap[p.id] || {};
@@ -918,6 +941,7 @@ async function loadDashboard() {
     
     let mutuallyCompatibleCount = 0;
     let totalCompared = 0;
+    
     Object.keys(myAnswersLookup).forEach(qid => {
       const myAns = myAnswersLookup[qid]?.answer;
       const myAcceptable = myAnswersLookup[qid]?.acceptable || [myAns];
@@ -933,18 +957,37 @@ async function loadDashboard() {
         }
       }
     });
+    
     if (totalCompared > 0) {
       const compatibilityRatio = mutuallyCompatibleCount / totalCompared;
       score = Math.floor(50 + (compatibilityRatio * 49));
     }
-    const distance = calculateDistance(myLat, myLon, p.latitude, p.longitude);
-    return { ...p, matchScore: Math.min(score, 99), distanceKm: distance };
+    
+    return { ...p, matchScore: Math.min(score, 99) };
   });
 
+  // Tiered Progressive Expansion Sort:
+  // 1. Group candidates into 5km distance tiers (Tier 0: 0-5km, Tier 1: 5-10km, Tier 2: 10-15km, etc.)
+  // 2. Prioritize closer distance tiers first.
+  // 3. Within each exact 5km tier, sort by highest match score descending.
   filteredProfiles.sort((a, b) => {
-    if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
-    return a.distanceKm - b.distanceKm;
+    const tierA = Math.floor((a.distanceKm || 0) / 5);
+    const tierB = Math.floor((b.distanceKm || 0) / 5);
+
+    // Prioritize closer 5km distance brackets first
+    if (tierA !== tierB) {
+      return tierA - tierB;
+    }
+
+    // Within the same 5km bracket, sort by highest match score descending
+    if (b.matchScore !== a.matchScore) {
+      return b.matchScore - a.matchScore;
+    }
+
+    // Fallback to absolute closest distance if match scores are identical
+    return (a.distanceKm || 0) - (b.distanceKm || 0);
   });
+
   availableProfiles = filteredProfiles;
   currentCardIndex = 0;
   
