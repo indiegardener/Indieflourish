@@ -671,7 +671,6 @@ async function loadQuestionnaire(isDeepDive = false) {
   
   container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">Loading questionnaire...</p>';
   
-  // Fetch questions cleanly without complex PostgREST filters
   let { data: questions, error } = await supabaseClient
     .from('questions')
     .select('*')
@@ -682,7 +681,6 @@ async function loadQuestionnaire(isDeepDive = false) {
     return;
   }
   
-  // Filter for onboarding vs deep-dive
   questions = questions.filter(q => isDeepDive ? q.is_deep_dive === true : !q.is_deep_dive);
   
   if (!questions.length) {
@@ -712,14 +710,14 @@ async function loadQuestionnaire(isDeepDive = false) {
       ownOptionsHTML += `<button type="button" class="option-btn ${isSelected}" data-qid="${q.id}" data-optid="${opt.id}">${opt.label}</button>`;
     });
     
-    // 2. Render multi-select checkboxes for acceptable partner answers (Strict Left-Aligned Flexbox)
+    // 2. Render clean, robust rows for acceptable partner answers
     let acceptableOptionsHTML = '';
     q.options.forEach(opt => {
       const isChecked = userAnswersMap[q.id].acceptable.includes(opt.id) ? 'checked' : '';
       acceptableOptionsHTML += `
-        <label style="display: flex; align-items: flex-start; justify-content: flex-start; width: 100%; text-align: left; gap: 10px; font-size: 0.85rem; color: var(--text-main); margin-top: 8px; cursor: pointer;">
-          <input type="checkbox" class="acceptable-chk" data-qid="${q.id}" data-optid="${opt.id}" ${isChecked} style="accent-color: var(--primary); margin-top: 2px; flex-shrink: 0;" />
-          <span style="flex-grow: 1; text-align: left;">${opt.label}</span>
+        <label style="display: flex; align-items: flex-start; gap: 10px; margin-top: 10px; cursor: pointer; font-size: 0.85rem; color: var(--text-main); text-align: left;">
+          <input type="checkbox" class="acceptable-chk" data-qid="${q.id}" data-optid="${opt.id}" ${isChecked} style="margin-top: 2px; accent-color: var(--primary); flex-shrink: 0;" />
+          <span style="line-height: 1.4;">${opt.label}</span>
         </label>
       `;
     });
@@ -733,9 +731,9 @@ async function loadQuestionnaire(isDeepDive = false) {
         <div>${ownOptionsHTML}</div>
       </div>
 
-      <div style="background: #faf7f5; padding: 12px; border-radius: 8px; border-left: 3px solid var(--primary); text-align: left;">
-        <div style="font-size: 0.75rem; font-weight: 700; color: var(--primary); text-transform: uppercase; margin-bottom: 6px; text-align: left;">Acceptable answers from your match:</div>
-        <div style="display: flex; flex-direction: column; align-items: flex-start; width: 100%;">${acceptableOptionsHTML}</div>
+      <div style="background: #faf7f5; padding: 14px; border-radius: 8px; border-left: 3px solid var(--primary); text-align: left;">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--primary); text-transform: uppercase; margin-bottom: 8px;">Acceptable answers from your match:</div>
+        <div>${acceptableOptionsHTML}</div>
       </div>
     `;
     container.appendChild(card);
@@ -752,7 +750,6 @@ async function loadQuestionnaire(isDeepDive = false) {
       if (!userAnswersMap[qid]) userAnswersMap[qid] = { answer: null, acceptable: [] };
       userAnswersMap[qid].answer = optid;
       
-      // Automatically include own answer in acceptable list by default if empty
       if (userAnswersMap[qid].acceptable.length === 0) {
         userAnswersMap[qid].acceptable.push(optid);
         const matchingChk = document.querySelector(`.acceptable-chk[data-qid="${qid}"][data-optid="${optid}"]`);
@@ -782,7 +779,6 @@ async function loadQuestionnaire(isDeepDive = false) {
 
   updateQuizSubmitButtonState();
 }
-
 // SECTION 6.b: Quiz State & Submit Validation
 function updateQuizSubmitButtonState() {
   const submitBtn = document.getElementById('submit-quiz-btn');
