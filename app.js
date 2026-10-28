@@ -149,34 +149,35 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // SECTION 4.b: Global Modals, Geolocation Triggers & Navigation Listeners
-  const headerDonateBtn = document.getElementById('header-donate-btn');
-  const donateModal = document.getElementById('donate-modal');
-  const closeDonateModalBtn = document.getElementById('close-donate-modal-btn');
-  if (headerDonateBtn && donateModal) {
-    headerDonateBtn.addEventListener('click', () => { donateModal.classList.add('show'); });
-  }
-  if (closeDonateModalBtn && donateModal) {
-    closeDonateModalBtn.addEventListener('click', () => { donateModal.classList.remove('show'); });
-  }
+// SECTION 4.b: Global Modals, Geolocation Triggers & Navigation Listeners
+const headerDonateBtn = document.getElementById('header-donate-btn');
+const donateModal = document.getElementById('donate-modal');
+const closeDonateModalBtn = document.getElementById('close-donate-modal-btn');
+if (headerDonateBtn && donateModal) {
+  headerDonateBtn.addEventListener('click', () => { donateModal.classList.add('show'); });
+}
+if (closeDonateModalBtn && donateModal) {
+  closeDonateModalBtn.addEventListener('click', () => { donateModal.classList.remove('show'); });
+}
 
-  const detectLocBtn = document.getElementById('detect-location-btn');
-  if (detectLocBtn) {
-    detectLocBtn.addEventListener('click', () => { detectUserGeolocation('location'); });
-  }
-  const editDetectLocBtn = document.getElementById('edit-detect-location-btn');
-  if (editDetectLocBtn) {
-    editDetectLocBtn.addEventListener('click', () => { detectUserGeolocation('edit-location'); });
-  }
+const detectLocBtn = document.getElementById('detect-location-btn');
+if (detectLocBtn) {
+  detectLocBtn.addEventListener('click', () => { detectUserGeolocation('location'); });
+}
+const editDetectLocBtn = document.getElementById('edit-detect-location-btn');
+if (editDetectLocBtn) {
+  editDetectLocBtn.addEventListener('click', () => { detectUserGeolocation('edit-location'); });
+}
 
-  const backToProfileBtn = document.getElementById('back-to-profile-btn');
-  if (backToProfileBtn) {
-    backToProfileBtn.addEventListener('click', async () => { await loadDashboard(); });
-  }
-  const backToQuizBtn = document.getElementById('back-to-quiz-btn');
-  if (backToQuizBtn) {
-    backToQuizBtn.addEventListener('click', async () => { await loadQuestionnaire(false); });
-  }
+// Onboarding back button returns user to profile creation/editing form
+const backToProfileBtn = document.getElementById('back-to-profile-btn');
+if (backToProfileBtn) {
+  backToProfileBtn.addEventListener('click', () => { showSection('profile-section'); });
+}
+const backToQuizBtn = document.getElementById('back-to-quiz-btn');
+if (backToQuizBtn) {
+  backToQuizBtn.addEventListener('click', async () => { await loadQuestionnaire(false); });
+}
 
   // SECTION 4.c: Questionnaire, Feed, Chat, and Modal Action Listeners
   const photoInput = document.getElementById('photo-upload-input');
