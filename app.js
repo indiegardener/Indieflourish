@@ -1,13 +1,10 @@
 /* =========================================================================
    SECTION 1: CONSTANTS & GLOBAL STATE VARIABLES
    ========================================================================= */
-
-// SECTION 1.a: Supabase Client Initialization & Environment Config
 const SUPABASE_URL = 'https://wzfhgkwivhftxdjtzapx.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6Zmhna3dpdmhmdHhkanR6YXB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NTk0ODUsImV4cCI6MjEwODQzNTQ4NX0.HV12dnA-56Lm8D7UDzuoSw2cT9Nak8wBnHZoqAPgXBE';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// SECTION 1.b: Global Application State Variables
 let currentUser = null;
 let quizQuestions = [];
 let userAnswersMap = {}; // Stores { answer: 'opt_id', acceptable: ['opt_id_1', ...] }
@@ -22,26 +19,19 @@ let tempLatitude = null;
 let tempLongitude = null;
 let activeReportTargetId = null;
 
-
 /* =========================================================================
-   SECTION 2: UTILITY & HELPER FUNCTIONS
+   SECTION 2: UTILITY & HELPER FUNCTIONS (Image Safety, Geolocation, Math)
    ========================================================================= */
 
-// SECTION 2.a: Image Safety & Moderation Stubs
+// SECTION 2.a: Image Safety Bypass
 async function isImageSafe(imageElement) {
   return true;
 }
 
 // SECTION 2.b: Geolocation & Distance Calculation
-
-/* =========================================================================
-   SECTION 2.b: GEOLOCATION & DISTANCE CALCULATION
-   ========================================================================= */
-
-// Calculates geographic distance in kilometers between two GPS coordinates using the Haversine formula
 function calculateDistance(lat1, lon1, lat2, lon2) {
   if (!lat1 || !lon1 || !lat2 || !lon2) return 99999;
-  const R = 6371; // Earth's radius in kilometers
+  const R = 6371; // Earth radius in kilometers
   const dLat = deg2rad(lat2 - lat1);
   const dLon = deg2rad(lon2 - lon1);
   const a = 
@@ -56,8 +46,7 @@ function deg2rad(deg) {
   return deg * (Math.PI / 180); 
 }
 
-// Automatically fetches browser GPS coordinates, reverse-geocodes via OpenStreetMap Nominatim, 
-// and locks the read-only location input field to prevent manual input errors.
+// Automatically fetches browser GPS coordinates, reverse-geocodes via Nominatim, and locks read-only input
 function detectUserGeolocation(inputId = 'location') {
   const inputEl = document.getElementById(inputId);
   if (!navigator.geolocation) {
@@ -91,25 +80,25 @@ function detectUserGeolocation(inputId = 'location') {
     },
     (error) => {
       console.error('Geolocation acquisition error:', error);
-      alert('Unable to retrieve your location. Please ensure location permissions are enabled in your browser settings.');
+      alert('Unable to retrieve your location. Please ensure location permissions are enabled in browser settings.');
       if (inputEl) inputEl.value = 'Location detection failed — Click retry button';
     }, 
     { timeout: 10000, enableHighAccuracy: true }
   );
 }
-// SECTION 2.c: Security & HTML Escaping
+
+// SECTION 2.c: Security & Sanitization
 function escapeHTML(str) {
   return String(str).replace(/[&<>"']/g, function (m) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
   });
 }
 
-
 /* =========================================================================
    SECTION 3: NAVIGATION & VIEW SWITCHING MANAGER
    ========================================================================= */
 
-// Manages visibility across app views (Auth, Onboarding, Quiz, Dashboard, Chat)
+// Manages visibility across app views and persists navigation state in sessionStorage
 function showSection(sectionId) {
   const sections = ['auth-section', 'profile-section', 'photos-prompt-section', 'quiz-section', 'dashboard-section', 'chat-section'];
   sections.forEach(id => {
@@ -119,10 +108,15 @@ function showSection(sectionId) {
   const activeEl = document.getElementById(sectionId);
   if (activeEl) activeEl.classList.add('active');
 
-  // AUTO-TRIGGER: If navigating to profile setup, automatically fetch GPS location on load
+  // Persist current section state for page refresh retention
+  if (sectionId) {
+    sessionStorage.setItem('indieflourish_current_section', sectionId);
+  }
+
+  // AUTO-TRIGGER: If navigating to profile setup, automatically trigger GPS on load
   if (sectionId === 'profile-section') {
     const locInput = document.getElementById('location');
-    if (locInput && (!locInput.value || locInput.value.trim() === '')) {
+    if (locInput && (!locInput.value || locInput.value.trim() === '' || locInput.value.includes('Detecting'))) {
       detectUserGeolocation('location');
     }
   }
@@ -130,7 +124,6 @@ function showSection(sectionId) {
   const menuContainer = document.getElementById('header-menu-container');
   const donateBtn = document.getElementById('header-donate-btn');
   
-  // Toggle header navigation menu & donate button visibility based on dashboard state
   if (menuContainer && donateBtn) {
     const isDashboard = (sectionId === 'dashboard-section' || sectionId === 'chat-section');
     menuContainer.style.display = isDashboard ? 'block' : 'none';
@@ -141,19 +134,21 @@ function showSection(sectionId) {
     actionBar.style.display = (sectionId === 'dashboard-section' && document.getElementById('view-discover').style.display !== 'none' && currentCardIndex < availableProfiles.length) ? 'flex' : 'none';
   }
 }
+
 /* =========================================================================
    SECTION 4: APPLICATION INITIALIZATION & EVENT LISTENERS
    ========================================================================= */
 
 window.addEventListener('DOMContentLoaded', async () => {
-  // SECTION 4.a: Session Check & Magic Link Auth Handlers
+  // Check active Supabase authentication session on app load
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (session && session.user) {
     currentUser = session.user;
     window.history.replaceState({}, document.title, window.location.pathname);
     await checkProfileStatus();
   }
-  
+
+  // Feature: Magic Link Email Authentication Trigger
   const sendBtn = document.getElementById('send-magic-link-btn');
   if (sendBtn) {
     sendBtn.addEventListener('click', async () => {
@@ -177,37 +172,62 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-// SECTION 4.b: Global Modals, Geolocation Triggers & Navigation Listeners
-const headerDonateBtn = document.getElementById('header-donate-btn');
-const donateModal = document.getElementById('donate-modal');
-const closeDonateModalBtn = document.getElementById('close-donate-modal-btn');
-if (headerDonateBtn && donateModal) {
-  headerDonateBtn.addEventListener('click', () => { donateModal.classList.add('show'); });
-}
-if (closeDonateModalBtn && donateModal) {
-  closeDonateModalBtn.addEventListener('click', () => { donateModal.classList.remove('show'); });
-}
+  // Feature: Support / Donation Modal Handlers
+  const headerDonateBtn = document.getElementById('header-donate-btn');
+  const donateModal = document.getElementById('donate-modal');
+  const closeDonateModalBtn = document.getElementById('close-donate-modal-btn');
+  if (headerDonateBtn && donateModal) {
+    headerDonateBtn.addEventListener('click', () => { donateModal.classList.add('show'); });
+  }
+  if (closeDonateModalBtn && donateModal) {
+    closeDonateModalBtn.addEventListener('click', () => { donateModal.classList.remove('show'); });
+  }
 
-const detectLocBtn = document.getElementById('detect-location-btn');
-if (detectLocBtn) {
-  detectLocBtn.addEventListener('click', () => { detectUserGeolocation('location'); });
-}
-const editDetectLocBtn = document.getElementById('edit-detect-location-btn');
-if (editDetectLocBtn) {
-  editDetectLocBtn.addEventListener('click', () => { detectUserGeolocation('edit-location'); });
-}
+  // Geolocation trigger buttons
+  const detectLocBtn = document.getElementById('detect-location-btn');
+  if (detectLocBtn) {
+    detectLocBtn.addEventListener('click', () => { detectUserGeolocation('location'); });
+  }
+  const editDetectLocBtn = document.getElementById('edit-detect-location-btn');
+  if (editDetectLocBtn) {
+    editDetectLocBtn.addEventListener('click', () => { detectUserGeolocation('edit-location'); });
+  }
 
-// Onboarding back button returns user to profile creation/editing form
-const backToProfileBtn = document.getElementById('back-to-profile-btn');
-if (backToProfileBtn) {
-  backToProfileBtn.addEventListener('click', () => { showSection('profile-section'); });
-}
-const backToQuizBtn = document.getElementById('back-to-quiz-btn');
-if (backToQuizBtn) {
-  backToQuizBtn.addEventListener('click', async () => { await loadQuestionnaire(false); });
-}
+  // Navigation action buttons
+  const backToProfileBtn = document.getElementById('back-to-profile-btn');
+  if (backToProfileBtn) {
+    backToProfileBtn.addEventListener('click', async () => { await loadDashboard(); });
+  }
+  const backToQuizBtn = document.getElementById('back-to-quiz-btn');
+  if (backToQuizBtn) {
+    backToQuizBtn.addEventListener('click', async () => { await loadQuestionnaire(false); });
+  }
 
-  // SECTION 4.c: Questionnaire, Feed, Chat, and Modal Action Listeners
+  // Feature: Chat Back Button Handler
+  const backToConnectionsBtn = document.getElementById('back-to-connections-btn');
+  if (backToConnectionsBtn) {
+    backToConnectionsBtn.addEventListener('click', async () => {
+      sessionStorage.setItem('indieflourish_current_section', 'dashboard-section');
+      sessionStorage.setItem('indieflourish_dashboard_tab', 'connections');
+      showSection('dashboard-section');
+      
+      const discoverTab = document.getElementById('tab-discover-btn');
+      const connectionsTab = document.getElementById('tab-connections-btn');
+      const viewDiscover = document.getElementById('view-discover');
+      const viewConnections = document.getElementById('view-connections');
+      
+      if (discoverTab && connectionsTab) {
+        discoverTab.classList.remove('active');
+        connectionsTab.classList.add('active');
+        if (viewDiscover) viewDiscover.style.display = 'none';
+        if (viewConnections) viewConnections.style.display = 'flex';
+      }
+      
+      await loadConnectionsList();
+    });
+  }
+
+  // Feature: Photo Upload & Storage Management
   const photoInput = document.getElementById('photo-upload-input');
   if (photoInput) {
     photoInput.addEventListener('change', async (e) => {
@@ -226,6 +246,7 @@ if (backToQuizBtn) {
     });
   }
 
+  // Save Photos & Prompt setup handler
   const savePhotosPromptBtn = document.getElementById('save-photos-prompt-btn');
   if (savePhotosPromptBtn) {
     savePhotosPromptBtn.addEventListener('click', async () => {
@@ -251,6 +272,7 @@ if (backToQuizBtn) {
     });
   }
 
+  // Feature: Questionnaire Submission
   const submitQuizBtn = document.getElementById('submit-quiz-btn');
   if (submitQuizBtn) {
     submitQuizBtn.addEventListener('click', async () => {
@@ -280,6 +302,7 @@ if (backToQuizBtn) {
     });
   }
 
+  // Feature: Dashboard Tab Switcher
   const discoverTab = document.getElementById('tab-discover-btn');
   const connectionsTab = document.getElementById('tab-connections-btn');
   const viewDiscover = document.getElementById('view-discover');
@@ -290,6 +313,7 @@ if (backToQuizBtn) {
       connectionsTab.classList.remove('active');
       viewDiscover.style.display = 'flex';
       viewConnections.style.display = 'none';
+      sessionStorage.setItem('indieflourish_dashboard_tab', 'discover');
       const actionbar = document.getElementById('sticky-action-bar');
       if (actionbar && currentCardIndex < availableProfiles.length) {
         actionbar.style.display = 'flex';
@@ -300,6 +324,7 @@ if (backToQuizBtn) {
       discoverTab.classList.remove('active');
       viewDiscover.style.display = 'none';
       viewConnections.style.display = 'flex';
+      sessionStorage.setItem('indieflourish_dashboard_tab', 'connections');
       const actionbar = document.getElementById('sticky-action-bar');
       if (actionbar) actionbar.style.display = 'none';
       const unreadDot = document.getElementById('unread-dot');
@@ -308,6 +333,7 @@ if (backToQuizBtn) {
     });
   }
 
+  // Feature: Hamburger Navigation Menu Dropdown
   const menuToggleBtn = document.getElementById('menu-toggle-btn');
   const dropdownMenu = document.getElementById('dropdown-menu');
   if (menuToggleBtn && dropdownMenu) {
@@ -318,6 +344,7 @@ if (backToQuizBtn) {
     document.addEventListener('click', () => { dropdownMenu.classList.remove('show'); });
   }
 
+  // Menu Options: Profile Preview, Sign Out, Account Deletion
   const profilePreviewBtn = document.getElementById('menu-profile-preview');
   const signOutBtn = document.getElementById('menu-sign-out');
   const deleteAccountBtn = document.getElementById('menu-delete-account');
@@ -332,6 +359,7 @@ if (backToQuizBtn) {
   }
   if (signOutBtn) {
     signOutBtn.addEventListener('click', async () => {
+      sessionStorage.clear();
       await supabaseClient.auth.signOut();
       currentUser = null;
       userAnswersMap = {};
@@ -356,20 +384,26 @@ if (backToQuizBtn) {
     });
   }
 
+  // Feature: Discovery Preferences Modal Handlers
   const prefModal = document.getElementById('preferences-modal');
   const openPrefBtn = document.getElementById('open-preferences-modal-btn');
   const closePrefBtn = document.getElementById('close-preferences-modal-btn');
   const savePrefBtn = document.getElementById('save-preferences-btn');
   if (openPrefBtn && prefModal) {
-    openPrefBtn.addEventListener('click', async () => { await openPreferencesModal(); });
+    openPrefBtn.addEventListener('click', async () => {
+      await openPreferencesModal();
+    });
   }
   if (closePrefBtn && prefModal) {
     closePrefBtn.addEventListener('click', () => { prefModal.classList.remove('show'); });
   }
   if (savePrefBtn) {
-    savePrefBtn.addEventListener('click', async () => { await saveUserPreferences(); });
+    savePrefBtn.addEventListener('click', async () => {
+      await saveUserPreferences();
+    });
   }
 
+  // Feature: Edit Profile Modal & Photo Management
   const editProfileModal = document.getElementById('edit-profile-modal');
   const closeEditModalBtn = document.getElementById('close-edit-modal-btn');
   const saveEditedProfileBtn = document.getElementById('save-edited-profile-btn');
@@ -421,6 +455,10 @@ if (backToQuizBtn) {
         images: editPhotosTemp,
         updated_at: new Date().toISOString()
       };
+      const editDobEl = document.getElementById('edit-dob');
+      if (editDobEl && editDobEl.value) {
+        updatePayload.dob = editDobEl.value;
+      }
       if (tempLatitude !== null && tempLongitude !== null) {
         updatePayload.latitude = tempLatitude;
         updatePayload.longitude = tempLongitude;
@@ -436,6 +474,7 @@ if (backToQuizBtn) {
     });
   }
 
+  // Feature: Bio / Prompt Comment Note Modal Handlers
   const bioCommentModal = document.getElementById('bio-comment-modal');
   const cancelCommentBtn = document.getElementById('cancel-comment-btn');
   const sendCommentConnectBtn = document.getElementById('send-comment-connect-btn');
@@ -455,6 +494,7 @@ if (backToQuizBtn) {
     });
   }
 
+  // Feature: User Reporting Modal Handlers
   const closeReportModalBtn = document.getElementById('close-report-modal-btn');
   const submitReportBtn = document.getElementById('submit-report-btn');
   const reportModal = document.getElementById('report-modal');
@@ -483,6 +523,7 @@ if (backToQuizBtn) {
     });
   }
 
+  // Feature: Incoming Like Review Modal Handlers
   const reviewModal = document.getElementById('review-modal');
   const closeReviewModalBtn = document.getElementById('close-review-modal-btn');
   const reviewPassBtn = document.getElementById('review-pass-btn');
@@ -511,6 +552,7 @@ if (backToQuizBtn) {
     });
   }
 
+  // Feature: Real-time Chat Messaging Input Handlers
   const sendMessageBtn = document.getElementById('send-message-btn');
   const chatMessageInput = document.getElementById('chat-message-input');
   if (sendMessageBtn && chatMessageInput) {
@@ -520,6 +562,7 @@ if (backToQuizBtn) {
     });
   }
 
+  // Feature: Chat Header Partner Profile & Unmatch Handlers
   const chatHeaderProfileTrigger = document.getElementById('chat-header-profile-trigger');
   const partnerProfileModal = document.getElementById('partner-profile-modal');
   const closePartnerModalBtn = document.getElementById('close-partner-modal-btn');
@@ -538,30 +581,6 @@ if (backToQuizBtn) {
     });
   }
 });
-
-// Section 4.d Feature: Chat Back Button Handler (Returns to Connections & Matches view)
-  const backToConnectionsBtn = document.getElementById('back-to-connections-btn');
-  if (backToConnectionsBtn) {
-    backToConnectionsBtn.addEventListener('click', async () => {
-      showSection('dashboard-section');
-      
-      // Ensure the Connections & Matches tab is active on the dashboard
-      const discoverTab = document.getElementById('tab-discover-btn');
-      const connectionsTab = document.getElementById('tab-connections-btn');
-      const viewDiscover = document.getElementById('view-discover');
-      const viewConnections = document.getElementById('view-connections');
-      
-      if (discoverTab && connectionsTab) {
-        discoverTab.classList.remove('active');
-        connectionsTab.classList.add('active');
-        if (viewDiscover) viewDiscover.style.display = 'none';
-        if (viewConnections) viewConnections.style.display = 'flex';
-      }
-      
-      // Refresh the connections list
-      await loadConnectionsList();
-    });
-  }
 
 /* =========================================================================
    SECTION 5: PROFILE & ONBOARDING MANAGEMENT
@@ -647,7 +666,7 @@ async function triggerSaveProfile() {
   }
 }
 
-// SECTION 5.b: Storage Uploads & Thumbnail Management
+// Uploads images to Supabase storage bucket and returns public URLs
 async function uploadImagesToSupabase(file, previewContainerId, isEditMode = false) {
   const previewContainer = document.getElementById(previewContainerId);
   if (!file) return null;
@@ -673,6 +692,7 @@ async function uploadImagesToSupabase(file, previewContainerId, isEditMode = fal
   return null;
 }
 
+// Renders interactive photo thumbnails inside the edit profile modal
 function renderEditPhotoThumbnails() {
   const preview = document.getElementById('edit-photo-preview');
   preview.innerHTML = '';
@@ -703,15 +723,56 @@ function updatePhotoCountIndicator() {
   }
 }
 
-// SECTION 5.c: Profile Status Routing
+// SECTION 5.b: Automatically monitors profile status and restores state on refresh
 async function checkProfileStatus() {
   if (!currentUser) return;
   const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
   if (profile) {
     const { data: answers } = await supabaseClient.from('user_answers').select('question_id').eq('user_id', currentUser.id);
+    const savedSection = sessionStorage.getItem('indieflourish_current_section');
+
     if (answers && answers.length > 0) {
       if (!profile.images || profile.images.length === 0) {
         showSection('photos-prompt-section');
+      } else if (savedSection) {
+        if (savedSection === 'chat-section') {
+          const savedChatId = sessionStorage.getItem('indieflourish_active_chat_id');
+          const savedPartnerJSON = sessionStorage.getItem('indieflourish_active_chat_partner');
+          if (savedChatId && savedPartnerJSON) {
+            try {
+              const partner = JSON.parse(savedPartnerJSON);
+              await openChat(isNaN(savedChatId) ? savedChatId : parseInt(savedChatId), partner);
+              return;
+            } catch (e) {
+              console.error('Error restoring chat state:', e);
+            }
+          }
+          await loadDashboard();
+        } else if (savedSection === 'dashboard-section') {
+          const savedTab = sessionStorage.getItem('indieflourish_dashboard_tab');
+          if (savedTab === 'connections') {
+            showSection('dashboard-section');
+            const discoverTab = document.getElementById('tab-discover-btn');
+            const connectionsTab = document.getElementById('tab-connections-btn');
+            const vDisc = document.getElementById('view-discover');
+            const vConn = document.getElementById('view-connections');
+            if (discoverTab && connectionsTab) {
+              discoverTab.classList.remove('active');
+              connectionsTab.classList.add('active');
+              if (vDisc) vDisc.style.display = 'none';
+              if (vConn) vConn.style.display = 'flex';
+            }
+            await loadConnectionsList();
+          } else {
+            await loadDashboard();
+          }
+        } else if (savedSection === 'quiz-section') {
+          await loadQuestionnaire(false);
+        } else if (savedSection === 'photos-prompt-section') {
+          showSection('photos-prompt-section');
+        } else {
+          await loadDashboard();
+        }
       } else {
         await loadDashboard();
       }
@@ -723,12 +784,11 @@ async function checkProfileStatus() {
   }
 }
 
-
 /* =========================================================================
    SECTION 6: QUESTIONNAIRE ENGINE (Personal Answer & Acceptable Partner Choices)
    ========================================================================= */
 
-// SECTION 6.a: Questionnaire & Deep-Dive Loader
+// Loads questionnaire with personal answer selection and acceptable partner option pickers
 async function loadQuestionnaire(isDeepDive = false) {
   showSection('quiz-section');
   const container = document.getElementById('quiz-container');
@@ -736,72 +796,68 @@ async function loadQuestionnaire(isDeepDive = false) {
   
   container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">Loading questionnaire...</p>';
   
-  // Fetch all questions cleanly without complex PostgREST .or() filters
-  let { data: questions, error } = await supabaseClient
-    .from('questions')
-    .select('*')
-    .order('id', { ascending: true });
-  
+  let query = supabaseClient.from('questions').select('*');
+  if (isDeepDive) {
+    query = query.eq('is_deep_dive', true);
+  } else {
+    query = query.or('is_deep_dive.is.null,is_deep_dive.eq.false');
+  }
+  let { data: questions, error } = await query.order('id', { ascending: true });
+  if ((error || !questions || !questions.length) && isDeepDive) {
+    const fallbackQuery = await supabaseClient.from('questions').select('*').order('id', { ascending: true });
+    questions = fallbackQuery.data;
+    error = fallbackQuery.error;
+  }
   if (error || !questions || !questions.length) {
     container.innerHTML = '<p style="text-align: center; color: var(--accent);">Unable to load questions.</p>';
     return;
   }
-  
-  // Robust JavaScript filtering for onboarding vs deep-dive questions
-  questions = questions.filter(q => isDeepDive ? q.is_deep_dive === true : !q.is_deep_dive);
-  
-  if (!questions.length) {
-    const fallbackQuery = await supabaseClient.from('questions').select('*').order('id', { ascending: true });
-    questions = fallbackQuery.data || [];
-  }
-
   quizQuestions = questions;
   container.innerHTML = isDeepDive ? '<h3 style="color:var(--primary); margin-bottom:12px;">Deep-Dive Profile Questionnaire</h3>' : '';
-  
   questions.forEach((q, idx) => {
     if (!userAnswersMap[q.id]) {
       userAnswersMap[q.id] = { answer: null, acceptable: [] };
     }
     const card = document.createElement('div');
     card.className = 'question-card';
+    card.style.marginBottom = '20px';
+    card.style.padding = '16px';
+    card.style.background = '#fff';
+    card.style.borderRadius = '12px';
+    card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
     
-    // 1. Render personal single-select option buttons
     let ownOptionsHTML = '';
     q.options.forEach(opt => {
       const isSelected = userAnswersMap[q.id].answer === opt.id ? 'selected' : '';
       ownOptionsHTML += `<button type="button" class="option-btn ${isSelected}" data-qid="${q.id}" data-optid="${opt.id}">${opt.label}</button>`;
     });
     
-    // 2. Render clean rows for acceptable partner answers using CSS classes
     let acceptableOptionsHTML = '';
     q.options.forEach(opt => {
       const isChecked = userAnswersMap[q.id].acceptable.includes(opt.id) ? 'checked' : '';
       acceptableOptionsHTML += `
-        <label class="acceptable-option-row">
-          <input type="checkbox" class="acceptable-chk acceptable-option-checkbox" data-qid="${q.id}" data-optid="${opt.id}" ${isChecked} />
-          <span class="acceptable-option-text">${opt.label}</span>
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-main); margin-top: 6px; cursor: pointer;">
+          <input type="checkbox" class="acceptable-chk" data-qid="${q.id}" data-optid="${opt.id}" ${isChecked} style="accent-color: var(--primary);" />
+          ${opt.label}
         </label>
       `;
     });
-
     card.innerHTML = `
       <span class="badge" style="font-size: 0.7rem; background: var(--primary-light); color: var(--primary); padding: 3px 8px; border-radius: 4px; font-weight: 600;">${q.category || 'Lifestyle'}</span>
-      <p style="font-weight: 600; font-size: 0.95rem; margin: 8px 0 12px 0; color: var(--text-main); text-align: left;">${idx + 1}. ${q.question_text}</p>
+      <p style="font-weight: 600; font-size: 0.95rem; margin: 8px 0 12px 0; color: var(--text-main);">${idx + 1}. ${q.question_text}</p>
       
-      <div style="margin-bottom: 14px; text-align: left;">
+      <div style="margin-bottom: 14px;">
         <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Your Answer:</div>
         <div>${ownOptionsHTML}</div>
       </div>
-
-      <div class="acceptable-container-box">
-        <div style="font-size: 0.75rem; font-weight: 700; color: var(--primary); text-transform: uppercase; margin-bottom: 8px;">Acceptable answers from your match:</div>
+      <div style="background: #faf7f5; padding: 10px 12px; border-radius: 8px; border-left: 3px solid var(--primary);">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--primary); text-transform: uppercase; margin-bottom: 4px;">Acceptable answers from your match:</div>
         <div>${acceptableOptionsHTML}</div>
       </div>
     `;
     container.appendChild(card);
   });
 
-  // Event listener for user's own answer selection
   document.querySelectorAll('.option-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const qid = e.target.getAttribute('data-qid');
@@ -812,7 +868,6 @@ async function loadQuestionnaire(isDeepDive = false) {
       if (!userAnswersMap[qid]) userAnswersMap[qid] = { answer: null, acceptable: [] };
       userAnswersMap[qid].answer = optid;
       
-      // Automatically include own answer in acceptable list by default if empty
       if (userAnswersMap[qid].acceptable.length === 0) {
         userAnswersMap[qid].acceptable.push(optid);
         const matchingChk = document.querySelector(`.acceptable-chk[data-qid="${qid}"][data-optid="${optid}"]`);
@@ -822,7 +877,6 @@ async function loadQuestionnaire(isDeepDive = false) {
     });
   });
 
-  // Event listener for acceptable partner options checkboxes
   document.querySelectorAll('.acceptable-chk').forEach(chk => {
     chk.addEventListener('change', (e) => {
       const qid = e.target.getAttribute('data-qid');
@@ -839,10 +893,9 @@ async function loadQuestionnaire(isDeepDive = false) {
       }
     });
   });
-
   updateQuizSubmitButtonState();
 }
-// SECTION 6.b: Quiz State & Submit Validation
+
 function updateQuizSubmitButtonState() {
   const submitBtn = document.getElementById('submit-quiz-btn');
   if (!submitBtn) return;
@@ -862,7 +915,6 @@ function updateQuizSubmitButtonState() {
   }
 }
 
-
 /* =========================================================================
    SECTION 7: DASHBOARD, DISCOVERY FEED & ADVANCED MATCHING ALGORITHM
    ========================================================================= */
@@ -880,7 +932,7 @@ function calculateAge(dobString) {
   return age;
 }
 
-// Loads discovery feed, applies distance, age, gender, and intent filters, and executes tiered sorting
+// Loads discovery feed, applies distance, age, gender, and intent filters, and executes 5km tiered sorting
 async function loadDashboard() {
   showSection('dashboard-section');
   const deckContainer = document.getElementById('deck-container');
@@ -901,7 +953,7 @@ async function loadDashboard() {
   const minAllowedAge = myProfile?.pref_min_age !== undefined ? myProfile.pref_min_age : 18;
   const maxAllowedAge = myProfile?.pref_max_age !== undefined ? myProfile.pref_max_age : 99;
 
-  // Fetch current user's answers and acceptable choices for matching
+  // Fetch current user's answers and acceptable choices
   const { data: myAnswers } = await supabaseClient
     .from('user_answers')
     .select('question_id, selected_option_id, acceptable_option_ids')
@@ -950,7 +1002,7 @@ async function loadDashboard() {
     return;
   }
 
-  // Fetch all user answers and acceptable option arrays to compute compatibility scores
+  // Fetch all user answers to compute reciprocal compatibility scores
   const { data: allAnswers } = await supabaseClient.from('user_answers').select('user_id, question_id, selected_option_id, acceptable_option_ids');
   
   const profilesAnswersMap = {};
@@ -981,7 +1033,7 @@ async function loadDashboard() {
     const distance = calculateDistance(myLat, myLon, p.latitude, p.longitude);
     p.distanceKm = distance;
     
-    // Max distance filter check (if slider is under 100, enforce limit)
+    // Max distance filter check
     if (maxAllowedDistance < 100 && distance > maxAllowedDistance) return false;
     
     return true;
@@ -1019,10 +1071,7 @@ async function loadDashboard() {
     return { ...p, matchScore: Math.min(score, 99) };
   });
 
-  // Tiered Progressive Expansion Sort:
-  // 1. Group candidates into 5km distance tiers (Tier 0: 0-5km, Tier 1: 5-10km, etc.)
-  // 2. Prioritize closer distance tiers first.
-  // 3. Within each exact 5km tier, sort by highest match score descending.
+  // Tiered Progressive Expansion Sort: Group into 5km distance tiers, ranking by match percentage
   filteredProfiles.sort((a, b) => {
     const tierA = Math.floor((a.distanceKm || 0) / 5);
     const tierB = Math.floor((b.distanceKm || 0) / 5);
@@ -1079,7 +1128,7 @@ async function checkForUnreadMessages() {
   }
 }
 
-// Bumble-Style Continuous Scroll Feed Renderer
+// Continuous Scroll Feed Renderer
 function renderDeck() {
   const deckContainer = document.getElementById('deck-container');
   deckContainer.innerHTML = '';
@@ -1387,8 +1436,6 @@ async function handleLeftSwipe(targetProfile) {
       { requester_id: currentUser.id, receiver_id: targetProfile.id, status: 'rejected', created_at: new Date().toISOString() }
     ], { onConflict: 'requester_id,receiver_id' });
 }
-
-
 /* =========================================================================
    SECTION 8: CONNECTIONS, CHAT & MESSAGING SYSTEM
    ========================================================================= */
