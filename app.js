@@ -660,7 +660,7 @@ async function checkProfileStatus() {
 
 
 /* =========================================================================
-   SECTION 6: QUESTIONNAIRE ENGINE
+   SECTION 6: QUESTIONNAIRE ENGINE (Personal Answer & Acceptable Partner Choices)
    ========================================================================= */
 
 // SECTION 6.a: Questionnaire & Deep-Dive Loader
@@ -705,43 +705,43 @@ async function loadQuestionnaire(isDeepDive = false) {
     card.style.borderRadius = '12px';
     card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
     
-    // 1. Render user's own single-select answer options
+    // 1. Render personal single-select option buttons
     let ownOptionsHTML = '';
     q.options.forEach(opt => {
       const isSelected = userAnswersMap[q.id].answer === opt.id ? 'selected' : '';
       ownOptionsHTML += `<button type="button" class="option-btn ${isSelected}" data-qid="${q.id}" data-optid="${opt.id}">${opt.label}</button>`;
     });
     
-    // 2. Render multi-select checkboxes for acceptable match answers
+    // 2. Render multi-select checkboxes for acceptable partner answers (Strict Left-Aligned Flexbox)
     let acceptableOptionsHTML = '';
     q.options.forEach(opt => {
       const isChecked = userAnswersMap[q.id].acceptable.includes(opt.id) ? 'checked' : '';
       acceptableOptionsHTML += `
-        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-main); margin-top: 6px; cursor: pointer;">
-          <input type="checkbox" class="acceptable-chk" data-qid="${q.id}" data-optid="${opt.id}" ${isChecked} style="accent-color: var(--primary);" />
-          ${opt.label}
+        <label style="display: flex; align-items: flex-start; justify-content: flex-start; width: 100%; text-align: left; gap: 10px; font-size: 0.85rem; color: var(--text-main); margin-top: 8px; cursor: pointer;">
+          <input type="checkbox" class="acceptable-chk" data-qid="${q.id}" data-optid="${opt.id}" ${isChecked} style="accent-color: var(--primary); margin-top: 2px; flex-shrink: 0;" />
+          <span style="flex-grow: 1; text-align: left;">${opt.label}</span>
         </label>
       `;
     });
 
     card.innerHTML = `
       <span class="badge" style="font-size: 0.7rem; background: var(--primary-light); color: var(--primary); padding: 3px 8px; border-radius: 4px; font-weight: 600;">${q.category || 'Lifestyle'}</span>
-      <p style="font-weight: 600; font-size: 0.95rem; margin: 8px 0 12px 0; color: var(--text-main);">${idx + 1}. ${q.question_text}</p>
+      <p style="font-weight: 600; font-size: 0.95rem; margin: 8px 0 12px 0; color: var(--text-main); text-align: left;">${idx + 1}. ${q.question_text}</p>
       
-      <div style="margin-bottom: 14px;">
+      <div style="margin-bottom: 14px; text-align: left;">
         <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px;">Your Answer:</div>
         <div>${ownOptionsHTML}</div>
       </div>
 
-      <div style="background: #faf7f5; padding: 10px 12px; border-radius: 8px; border-left: 3px solid var(--primary);">
-        <div style="font-size: 0.75rem; font-weight: 700; color: var(--primary); text-transform: uppercase; margin-bottom: 4px;">Acceptable answers from your match:</div>
-        <div>${acceptableOptionsHTML}</div>
+      <div style="background: #faf7f5; padding: 12px; border-radius: 8px; border-left: 3px solid var(--primary); text-align: left;">
+        <div style="font-size: 0.75rem; font-weight: 700; color: var(--primary); text-transform: uppercase; margin-bottom: 6px; text-align: left;">Acceptable answers from your match:</div>
+        <div style="display: flex; flex-direction: column; align-items: flex-start; width: 100%;">${acceptableOptionsHTML}</div>
       </div>
     `;
     container.appendChild(card);
   });
 
-  // Event listener: Single-select for personal answer
+  // Event listener for user's own answer selection
   document.querySelectorAll('.option-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const qid = e.target.getAttribute('data-qid');
@@ -752,7 +752,7 @@ async function loadQuestionnaire(isDeepDive = false) {
       if (!userAnswersMap[qid]) userAnswersMap[qid] = { answer: null, acceptable: [] };
       userAnswersMap[qid].answer = optid;
       
-      // Smart default: If acceptable list is empty, include own chosen option
+      // Automatically include own answer in acceptable list by default if empty
       if (userAnswersMap[qid].acceptable.length === 0) {
         userAnswersMap[qid].acceptable.push(optid);
         const matchingChk = document.querySelector(`.acceptable-chk[data-qid="${qid}"][data-optid="${optid}"]`);
@@ -762,7 +762,7 @@ async function loadQuestionnaire(isDeepDive = false) {
     });
   });
 
-  // Event listener: Multi-select checkboxes for acceptable match answers
+  // Event listener for acceptable partner options checkboxes
   document.querySelectorAll('.acceptable-chk').forEach(chk => {
     chk.addEventListener('change', (e) => {
       const qid = e.target.getAttribute('data-qid');
