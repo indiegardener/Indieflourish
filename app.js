@@ -33,9 +33,15 @@ async function isImageSafe(imageElement) {
 }
 
 // SECTION 2.b: Geolocation & Distance Calculation
+
+/* =========================================================================
+   SECTION 2.b: GEOLOCATION & DISTANCE CALCULATION
+   ========================================================================= */
+
+// Calculates geographic distance in kilometers between two GPS coordinates using the Haversine formula
 function calculateDistance(lat1, lon1, lat2, lon2) {
   if (!lat1 || !lon1 || !lat2 || !lon2) return 99999;
-  const R = 6371;
+  const R = 6371; // Earth's radius in kilometers
   const dLat = deg2rad(lat2 - lat1);
   const dLon = deg2rad(lon2 - lon1);
   const a = 
@@ -45,38 +51,52 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
   return R * c;
 }
-function deg2rad(deg) { return deg * (Math.PI/180); }
 
-function detectUserGeolocation(inputId) {
-  const inputEl = document.getElementById(inputId);
-  if (!navigator.geolocation) {
-    alert('Geolocation is not supported by your browser');
-    return;
-  }
-  inputEl.value = 'Detecting GPS location...';
-  navigator.geolocation.getCurrentPosition(async (position) => {
-    tempLatitude = position.coords.latitude;
-    tempLongitude = position.coords.longitude;
-    try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${tempLatitude}&lon=${tempLongitude}`);
-      const data = await response.json();
-      
-      if (data && data.address) {
-        const city = data.address.city || data.address.town || data.address.village || data.address.state_district || '';
-        const state = data.address.state || '';
-        inputEl.value = city ? `${city}, ${state}` : data.display_name;
-      } else {
-        inputEl.value = `${tempLatitude.toFixed(2)}, ${tempLongitude.toFixed(2)}`;
-      }
-    } catch (err) {
-      inputEl.value = `${tempLatitude.toFixed(2)}, ${tempLongitude.toFixed(2)}`;
-    }
-  }, (error) => {
-    alert('Unable to retrieve your location. Please type manually.');
-    inputEl.value = '';
-  }, { timeout: 10000, enableHighAccuracy: true });
+function deg2rad(deg) { 
+  return deg * (Math.PI / 180); 
 }
 
+// Automatically fetches browser GPS coordinates, reverse-geocodes via OpenStreetMap Nominatim, 
+// and locks the read-only location input field to prevent manual input errors.
+function detectUserGeolocation(inputId = 'location') {
+  const inputEl = document.getElementById(inputId);
+  if (!navigator.geolocation) {
+    alert('Geolocation is not supported by your browser.');
+    if (inputEl) inputEl.value = 'Geolocation not supported';
+    return;
+  }
+  
+  if (inputEl) inputEl.value = 'Detecting GPS location...';
+  
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      tempLatitude = position.coords.latitude;
+      tempLongitude = position.coords.longitude;
+      
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${tempLatitude}&lon=${tempLongitude}`);
+        const data = await response.json();
+        
+        if (data && data.address) {
+          const city = data.address.city || data.address.town || data.address.village || data.address.state_district || '';
+          const state = data.address.state || '';
+          if (inputEl) inputEl.value = city ? `${city}, ${state}` : data.display_name;
+        } else {
+          if (inputEl) inputEl.value = `${tempLatitude.toFixed(2)}, ${tempLongitude.toFixed(2)}`;
+        }
+      } catch (err) {
+        console.warn('Reverse geocoding lookup failed:', err);
+        if (inputEl) inputEl.value = `${tempLatitude.toFixed(2)}, ${tempLongitude.toFixed(2)}`;
+      }
+    },
+    (error) => {
+      console.error('Geolocation acquisition error:', error);
+      alert('Unable to retrieve your location. Please ensure location permissions are enabled in your browser settings.');
+      if (inputEl) inputEl.value = 'Location detection failed — Click retry button';
+    }, 
+    { timeout: 10000, enableHighAccuracy: true }
+  );
+}
 // SECTION 2.c: Security & HTML Escaping
 function escapeHTML(str) {
   return String(str).replace(/[&<>"']/g, function (m) {
@@ -89,7 +109,7 @@ function escapeHTML(str) {
    SECTION 3: NAVIGATION & VIEW SWITCHING MANAGER
    ========================================================================= */
 
-// SECTION 3.a: View State Controller
+// Manages visibility across app views (Auth, Onboarding, Quiz, Dashboard, Chat)
 function showSection(sectionId) {
   const sections = ['auth-section', 'profile-section', 'photos-prompt-section', 'quiz-section', 'dashboard-section', 'chat-section'];
   sections.forEach(id => {
@@ -98,9 +118,19 @@ function showSection(sectionId) {
   });
   const activeEl = document.getElementById(sectionId);
   if (activeEl) activeEl.classList.add('active');
+
+  // AUTO-TRIGGER: If navigating to profile setup, automatically fetch GPS location on load
+  if (sectionId === 'profile-section') {
+    const locInput = document.getElementById('location');
+    if (locInput && (!locInput.value || locInput.value.trim() === '')) {
+      detectUserGeolocation('location');
+    }
+  }
+
   const menuContainer = document.getElementById('header-menu-container');
   const donateBtn = document.getElementById('header-donate-btn');
   
+  // Toggle header navigation menu & donate button visibility based on dashboard state
   if (menuContainer && donateBtn) {
     const isDashboard = (sectionId === 'dashboard-section' || sectionId === 'chat-section');
     menuContainer.style.display = isDashboard ? 'block' : 'none';
@@ -111,8 +141,6 @@ function showSection(sectionId) {
     actionBar.style.display = (sectionId === 'dashboard-section' && document.getElementById('view-discover').style.display !== 'none' && currentCardIndex < availableProfiles.length) ? 'flex' : 'none';
   }
 }
-
-
 /* =========================================================================
    SECTION 4: APPLICATION INITIALIZATION & EVENT LISTENERS
    ========================================================================= */
