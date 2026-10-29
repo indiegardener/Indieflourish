@@ -656,8 +656,8 @@ async function triggerSaveProfile() {
   }
 }
 
+// SECTION 5.b: Storage Uploads & Thumbnail Management
 async function uploadImagesToSupabase(file, previewContainerId, isEditMode = false) {
-  const previewContainer = document.getElementById(previewContainerId);
   if (!file) return null;
   const fileExt = file.name.split('.').pop();
   const fileName = `${currentUser.id}_${Date.now()}.${fileExt}`;
@@ -669,16 +669,48 @@ async function uploadImagesToSupabase(file, previewContainerId, isEditMode = fal
     return null;
   }
   const { data } = supabaseClient.storage.from('profile-images').getPublicUrl(fileName);
-  if (data && data.publicUrl) {
-    if (!isEditMode) {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'photo-thumb-wrapper';
-      wrapper.innerHTML = `<img src="${data.publicUrl}" class="card-photo-thumb" />`;
-      previewContainer.appendChild(wrapper);
-    }
-    return data.publicUrl;
-  }
-  return null;
+  return data ? data.publicUrl : null;
+}
+
+// Renders onboarding/setup photo thumbnails with deletion controls
+function renderSetupPhotoThumbnails() {
+  const previewContainer = document.getElementById('photo-preview-grid');
+  if (!previewContainer) return;
+  previewContainer.innerHTML = '';
+  
+  uploadedImageUrlsTemp.forEach((url, index) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'photo-thumb-wrapper';
+    wrap.innerHTML = `
+      <img src="${url}" class="card-photo-thumb" />
+      <button type="button" class="remove-setup-photo-btn" onclick="removeSetupPhoto(${index})" title="Remove photo">✕</button>
+    `;
+    previewContainer.appendChild(wrap);
+  });
+}
+
+// Renders onboarding/setup photo thumbnails with deletion controls
+function renderSetupPhotoThumbnails() {
+  const previewContainer = document.getElementById('photo-preview-grid');
+  if (!previewContainer) return;
+  previewContainer.innerHTML = '';
+  
+  uploadedImageUrlsTemp.forEach((url, index) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'photo-thumb-wrapper';
+    wrap.innerHTML = `
+      <img src="${url}" class="card-photo-thumb" />
+      <button type="button" class="remove-setup-photo-btn" onclick="removeSetupPhoto(${index})" title="Remove photo">✕</button>
+    `;
+    previewContainer.appendChild(wrap);
+  });
+}
+
+// Removes a selected photo during setup and updates indicator & input visibility
+function removeSetupPhoto(index) {
+  uploadedImageUrlsTemp.splice(index, 1);
+  renderSetupPhotoThumbnails();
+  updatePhotoCountIndicator();
 }
 
 function renderEditPhotoThumbnails() {
@@ -687,10 +719,10 @@ function renderEditPhotoThumbnails() {
   preview.innerHTML = '';
   editPhotosTemp.forEach((url, index) => {
     const wrap = document.createElement('div');
-    wrap.className = 'photo-thumb-wrapper edit-thumb-wrap';
+    wrap.className = 'photo-thumb-wrapper';
     wrap.innerHTML = `
       <img src="${url}" class="card-photo-thumb" />
-      <button type="button" class="remove-photo-btn" onclick="removeEditPhoto(${index})">✕</button>
+      <button type="button" class="remove-setup-photo-btn" onclick="removeEditPhoto(${index})" title="Remove photo">✕</button>
     `;
     preview.appendChild(wrap);
   });
@@ -705,9 +737,14 @@ function updatePhotoCountIndicator() {
   const indicator = document.getElementById('photo-count-indicator');
   if (indicator) { indicator.textContent = uploadedImageUrlsTemp.length; }
   const inputEl = document.getElementById('photo-upload-input');
-  if (inputEl && uploadedImageUrlsTemp.length >= 5) {
-    inputEl.disabled = true;
-    inputEl.style.display = 'none';
+  if (inputEl) {
+    if (uploadedImageUrlsTemp.length >= 5) {
+      inputEl.disabled = true;
+      inputEl.style.display = 'none';
+    } else {
+      inputEl.disabled = false;
+      inputEl.style.display = 'block';
+    }
   }
 }
 
