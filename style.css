@@ -179,18 +179,15 @@ body {
   flex-grow: 1;
 }
 
-/* Chat section automatically anchors from top to bottom, ignoring container bottom padding */
+/* Chat section expands to fill #app-container edge-to-edge, offsetting the 110px container bottom padding */
 #chat-section.active {
   display: flex;
   flex-direction: column;
-  position: absolute;
-  top: 12px;
-  left: 14px;
-  right: 14px;
-  bottom: 12px;
-  z-index: 20;
+  flex-grow: 1;
+  margin: -12px -14px -98px -14px;
+  padding: 12px 14px 14px 14px;
   background: var(--bg-color);
-}
+  box-sizing: border-box;
 
 .nav-tabs {
   display: flex;
