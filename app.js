@@ -1047,28 +1047,38 @@ async function updateActiveChatCount() {
   if (countBadge) { countBadge.innerHTML = `${count} / 3`; }
 }
 
+// Dashboard Checkers & Unread Notification Polling
 async function checkForUnreadMessages() {
   if (!currentUser) return;
+  
   const { data: connections } = await supabaseClient
     .from('connections')
     .select('id, requester_id, receiver_id, status')
     .or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
     
-  if (!connections || connections.length === 0) return;
-
-  const incomingPending = connections.filter(c => c.status === 'pending' && c.receiver_id === currentUser.id);
   const requestBadge = document.getElementById('request-badge');
+  const messageBadge = document.getElementById('message-badge');
+  const isConnectionsActive = document.getElementById('view-connections')?.classList.contains('active');
+
+  if (!connections || connections.length === 0) {
+    if (requestBadge) requestBadge.style.display = 'none';
+    if (messageBadge) messageBadge.style.display = 'none';
+    return;
+  }
+
+  // 1. Check for incoming pending connection requests
+  const incomingPending = connections.filter(c => c.status === 'pending' && c.receiver_id === currentUser.id);
   if (requestBadge) {
-    if (incomingPending.length > 0 && !document.getElementById('view-connections').classList.contains('active')) {
-      requestBadge.style.display = 'inline-flex';
+    if (incomingPending.length > 0 && !isConnectionsActive) {
+      requestBadge.style.display = 'inline-block';
       requestBadge.textContent = `💌 ${incomingPending.length} Req`;
     } else {
       requestBadge.style.display = 'none';
     }
   }
 
+  // 2. Check for accepted active connections messages
   const acceptedIds = connections.filter(c => c.status === 'accepted').map(c => c.id);
-  const messageBadge = document.getElementById('message-badge');
   if (acceptedIds.length === 0) {
     if (messageBadge) messageBadge.style.display = 'none';
     return;
@@ -1083,9 +1093,11 @@ async function checkForUnreadMessages() {
   if (latestMsgs && latestMsgs.length > 0) {
     const mostRecent = latestMsgs[0];
     if (mostRecent.sender_id !== currentUser.id) {
-      if (messageBadge && !document.getElementById('view-connections').classList.contains('active')) {
-        messageBadge.style.display = 'inline-flex';
+      if (messageBadge && !isConnectionsActive) {
+        messageBadge.style.display = 'inline-block';
         messageBadge.textContent = '💬 New Msg';
+      } else {
+        if (messageBadge) messageBadge.style.display = 'none';
       }
     } else {
       if (messageBadge) messageBadge.style.display = 'none';
