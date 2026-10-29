@@ -1145,3 +1145,13 @@ button.btn-outline-danger:hover {
   color: var(--text-muted);
   text-transform: capitalize;
 }
+/* =========================================================================
+   MODAL BUTTON STACK UTILITY
+   ========================================================================= */
+.modal-btn-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 18px;
+}
+
