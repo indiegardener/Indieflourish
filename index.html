@@ -278,19 +278,25 @@
     <button type="button" id="save-photos-prompt-btn">Complete Setup & Enter Discover</button>
   </div>
 
-  <!-- SECTION 5: DASHBOARD & DISCOVERY FEED --><!-- Update inside index.html under SECTION 4 (Dashboard) -->
-<div class="nav-tabs">
-  <button type="button" class="tab-btn active" id="tab-discover-btn">Discover</button>
-  <button type="button" class="tab-btn" id="tab-connections-btn" style="position: relative;">
-    Connections & Matches 
-    <span id="request-badge" style="display: none; font-size: 0.6rem; padding: 2px 6px; border-radius: 10px; background: var(--primary-light); color: var(--primary); margin-left: 4px; font-weight: 700;">💌 Req</span>
-    <span id="message-badge" style="display: none; font-size: 0.6rem; padding: 2px 6px; border-radius: 10px; background: var(--primary-light); color: var(--primary); margin-left: 4px; font-weight: 700;">💬 New Msg</span>
-  </button>
-</div>
+  <!-- SECTION 5: DASHBOARD & DISCOVERY FEED -->
+<div id="dashboard-section" class="section">
+    <div class="nav-tabs">
+      <button type="button" class="tab-btn active" id="tab-discover-btn">Discover</button>
+      <button type="button" class="tab-btn" id="tab-connections-btn">
+        Connections & Matches 
+        <span id="unread-dot" class="unread-dot" style="display: none;"></span>
+      </button>
+    </div>
 
-    <!-- VIEW A: DISCOVER FEED -->
+   <!-- VIEW A: DISCOVER FEED -->
     <div id="view-discover" class="dashboard-view active">
-      <div class="deck-subheader">
+      <!-- ... deck subheader & container ... -->
+    </div>
+    <!-- VIEW B: CONNECTIONS & MATCHES LIST -->
+    <div id="view-connections" class="dashboard-view" style="display: none;">
+      <!-- ... connections list ... -->
+    </div>
+  </div>
 
 <button type="button" id="open-preferences-modal-btn" class="preferences-btn">
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
