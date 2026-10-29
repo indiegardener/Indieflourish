@@ -374,24 +374,24 @@
       <input type="range" id="pref-max-distance" min="10" max="100" step="5" value="100" class="distance-range-input" />      
     </div>
 
-    <!-- Preferred Age Range -->
-    <div class="form-group margin-top-md">
-      <label class="block-label">Preferred Age Range</label>
-      <div class="age-inputs-row">
-        <input type="number" id="pref-min-age" min="18" max="100" value="18" placeholder="Min" class="age-input" />
-        <span class="text-muted">to</span>
-        <input type="number" id="pref-max-age" min="18" max="100" value="99" placeholder="Max" class="age-input" />
+<!-- Preferred Age Range -->
+    <div class="form-group" style="margin-top: 14px;">
+      <label style="font-weight: 600; margin-bottom: 6px; display: block;">Preferred Age Range</label>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <input type="number" id="pref-min-age" min="18" max="100" value="18" placeholder="Min" style="width: 50%; padding: 8px; border-radius: 6px; border: 1px solid var(--border); background-color: #faf9f7;" />
+        <span style="color: var(--text-muted); font-size: 0.9rem;">to</span>
+        <input type="number" id="pref-max-age" min="18" max="100" value="99" placeholder="Max" style="width: 50%; padding: 8px; border-radius: 6px; border: 1px solid var(--border); background-color: #faf9f7;" />
       </div>
     </div>
-
+    
     <!-- Preferred Genders -->
-    <div class="form-group">
-      <label class="block-label">Preferred Genders</label>
-      <div class="checkbox-stack" id="pref-gender-checkboxes">
-        <label><input type="checkbox" value="Man" checked /> Men</label>
-        <label><input type="checkbox" value="Woman" checked /> Women</label>
-        <label><input type="checkbox" value="Non-binary" checked /> Non-binary</label>
-        <label><input type="checkbox" value="Other" checked /> Other</label>
+    <div class="form-group" style="margin-top: 14px;">
+      <label style="font-weight: 600; margin-bottom: 6px; display: block;">Preferred Genders</label>
+      <div style="display: flex; flex-direction: column; gap: 8px;" id="pref-gender-checkboxes">
+        <label style="display: flex; align-items: center; font-weight: normal; cursor: pointer;"><input type="checkbox" value="Man" checked /> Men</label>
+        <label style="display: flex; align-items: center; font-weight: normal; cursor: pointer;"><input type="checkbox" value="Woman" checked /> Women</label>
+        <label style="display: flex; align-items: center; font-weight: normal; cursor: pointer;"><input type="checkbox" value="Non-binary" checked /> Non-binary</label>
+        <label style="display: flex; align-items: center; font-weight: normal; cursor: pointer;"><input type="checkbox" value="Other" checked /> Other</label>
       </div>
     </div>
 
