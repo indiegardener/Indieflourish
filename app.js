@@ -704,23 +704,6 @@ function renderSetupPhotoThumbnails() {
   });
 }
 
-// Renders onboarding/setup photo thumbnails with deletion controls
-function renderSetupPhotoThumbnails() {
-  const previewContainer = document.getElementById('photo-preview-grid');
-  if (!previewContainer) return;
-  previewContainer.innerHTML = '';
-  
-  uploadedImageUrlsTemp.forEach((url, index) => {
-    const wrap = document.createElement('div');
-    wrap.className = 'photo-thumb-wrapper';
-    wrap.innerHTML = `
-      <img src="${url}" class="card-photo-thumb" />
-      <button type="button" class="remove-setup-photo-btn" onclick="removeSetupPhoto(${index})" title="Remove photo">✕</button>
-    `;
-    previewContainer.appendChild(wrap);
-  });
-}
-
 // Removes a selected photo during setup and updates indicator & input visibility
 function removeSetupPhoto(index) {
   uploadedImageUrlsTemp.splice(index, 1);
