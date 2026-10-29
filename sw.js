@@ -67,3 +67,4 @@ self.addEventListener('fetch', (event) => {
       })
   );
 });
+const CACHE_NAME = 'indieflourish-v20'; // Incremented to flush old style cache
