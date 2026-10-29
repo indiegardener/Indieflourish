@@ -1104,25 +1104,44 @@ async function updateActiveChatCount() {
   if (countBadge) { countBadge.innerHTML = `${count} / 3`; }
 }
 
+// SECTION 7: Dashboard Checkers & Feed Management
 async function checkForUnreadMessages() {
   const { data: connections } = await supabaseClient
     .from('connections')
-    .select('id')
-    .eq('status', 'accepted')
+    .select('id, requester_id, receiver_id, status')
     .or(`requester_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
+    
   if (!connections || connections.length === 0) return;
-  const connectionIds = connections.map(c => c.id);
+
+  // 1. Check for incoming pending requests (Requests / Bio Comment Notes)
+  const incomingPending = connections.filter(c => c.status === 'pending' && c.receiver_id === currentUser.id);
+  const requestBadge = document.getElementById('request-badge');
+  if (requestBadge) {
+    if (incomingPending.length > 0 && !document.getElementById('view-connections').classList.contains('active')) {
+      requestBadge.style.display = 'inline-block';
+      requestBadge.textContent = `💌 ${incomingPending.length} New`;
+    } else {
+      requestBadge.style.display = 'none';
+    }
+  }
+
+  // 2. Check for unread chat messages in accepted connections
+  const acceptedIds = connections.filter(c => c.status === 'accepted').map(c => c.id);
+  if (acceptedIds.length === 0) return;
+
   const { data: latestMsgs } = await supabaseClient
     .from('messages')
     .select('sender_id, created_at, connection_id')
-    .in('connection_id', connectionIds)
+    .in('connection_id', acceptedIds)
     .order('created_at', { ascending: false });
+    
   if (latestMsgs && latestMsgs.length > 0) {
     const mostRecent = latestMsgs[0];
+    const messageBadge = document.getElementById('message-badge');
     if (mostRecent.sender_id !== currentUser.id) {
-      const unreadDot = document.getElementById('unread-dot');
-      if (unreadDot && !document.getElementById('view-connections').classList.contains('active')) {
-        unreadDot.style.display = 'inline-block';
+      if (messageBadge && !document.getElementById('view-connections').classList.contains('active')) {
+        messageBadge.style.display = 'inline-block';
+        messageBadge.textContent = '💬 New Msg';
       }
     }
   }
