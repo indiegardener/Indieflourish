@@ -112,16 +112,33 @@ function calculateAge(dobString) {
 /* =========================================================================
    SECTION 3: NAVIGATION & VIEW SWITCHING MANAGER
    ========================================================================= */
+
+// Manages visibility across app views (Auth, Onboarding, Quiz, Dashboard, Chat)
 function showSection(sectionId) {
-  const sections = ['auth-section', 'profile-section', 'photos-prompt-section', 'quiz-section', 'dashboard-section', 'chat-section'];
+  const sections = [
+    'auth-section', 
+    'profile-section', 
+    'photos-prompt-section', 
+    'quiz-section', 
+    'dashboard-section', 
+    'chat-section'
+  ];
+  
+  // Strictly remove 'active' from all primary sections first
   sections.forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.classList.remove('active');
+    if (el) {
+      el.classList.remove('active');
+    }
   });
   
+  // Add 'active' exclusively to the target section
   const activeEl = document.getElementById(sectionId);
-  if (activeEl) activeEl.classList.add('active');
+  if (activeEl) {
+    activeEl.classList.add('active');
+  }
 
+  // AUTO-TRIGGER: If navigating to profile setup, automatically fetch GPS location on load
   if (sectionId === 'profile-section') {
     const locInput = document.getElementById('location');
     if (locInput && (!locInput.value || locInput.value.trim() === '')) {
@@ -129,11 +146,14 @@ function showSection(sectionId) {
     }
   }
 
-  // Toggle header actions wrapper visibility (Donate button + Hamburger menu)
-  const headerActionsWrapper = document.getElementById('header-actions-wrapper');
-  if (headerActionsWrapper) {
-    const isDashboardOrChat = (sectionId === 'dashboard-section' || sectionId === 'chat-section');
-    headerActionsWrapper.style.display = isDashboardOrChat ? 'flex' : 'none';
+  const menuContainer = document.getElementById('header-menu-container');
+  const donateBtn = document.getElementById('header-donate-btn');
+  
+  // Toggle header navigation menu & donate button visibility based on dashboard state
+  if (menuContainer && donateBtn) {
+    const isDashboard = (sectionId === 'dashboard-section' || sectionId === 'chat-section');
+    menuContainer.style.display = isDashboard ? 'block' : 'none';
+    donateBtn.style.display = isDashboard ? 'inline-block' : 'none';
   }
 
   const actionBar = document.getElementById('sticky-action-bar');
