@@ -302,38 +302,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Feature: Dashboard Tab Switcher
-  const discoverTab = document.getElementById('tab-discover-btn');
-  const connectionsTab = document.getElementById('tab-connections-btn');
-  const viewDiscover = document.getElementById('view-discover');
-  const viewConnections = document.getElementById('view-connections');
-  if (discoverTab && connectionsTab) {
-    discoverTab.addEventListener('click', () => {
-      discoverTab.classList.add('active');
-      connectionsTab.classList.remove('active');
-      viewDiscover.style.display = 'flex';
-      viewConnections.style.display = 'none';
-      sessionStorage.setItem('indieflourish_dashboard_tab', 'discover');
-      const actionbar = document.getElementById('sticky-action-bar');
-      if (actionbar && currentCardIndex < availableProfiles.length) {
-        actionbar.style.display = 'flex';
-      }
-    });
-    connectionsTab.addEventListener('click', async () => {
-      connectionsTab.classList.add('active');
-      discoverTab.classList.remove('active');
-      viewDiscover.style.display = 'none';
-      viewConnections.style.display = 'flex';
-      sessionStorage.setItem('indieflourish_dashboard_tab', 'connections');
-      const actionbar = document.getElementById('sticky-action-bar');
-      if (actionbar) actionbar.style.display = 'none';
-      const unreadDot = document.getElementById('unread-dot');
-      if (unreadDot) unreadDot.style.display = 'none';
-      await loadConnectionsList();
-    });
-  }
-
-   // SECTION 4: Dashboard Tab Switcher & Notification Badge Handlers
+// SECTION 4: Dashboard Tab Switcher & Notification Badge Handlers
   const discoverTab = document.getElementById('tab-discover-btn');
   const connectionsTab = document.getElementById('tab-connections-btn');
   const viewDiscover = document.getElementById('view-discover');
@@ -370,7 +339,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       await loadConnectionsList();
     });
   }
-
+   
   // Feature: Hamburger Navigation Menu Dropdown
   const menuToggleBtn = document.getElementById('menu-toggle-btn');
   const dropdownMenu = document.getElementById('dropdown-menu');
