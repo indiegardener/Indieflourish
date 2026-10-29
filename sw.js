@@ -1,4 +1,4 @@
-const CACHE_NAME = 'indieflourish-v19';
+const CACHE_NAME = 'indieflourish-v21';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -33,14 +33,11 @@ self.addEventListener('activate', (event) => {
 
 // Fetch Event: Network-First Strategy with safe fallback
 self.addEventListener('fetch', (event) => {
-  // Only handle standard HTTP/HTTPS GET requests (ignore chrome-extension://, Supabase POSTs, etc.)
   if (!event.request.url.startsWith('http')) return;
   if (event.request.method !== 'GET') return;
-
   event.respondWith(
     fetch(event.request)
       .then((networkResponse) => {
-        // If network request succeeds, clone and store it in cache
         if (networkResponse && networkResponse.status === 200) {
           const responseClone = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -50,12 +47,10 @@ self.addEventListener('fetch', (event) => {
         return networkResponse;
       })
       .catch(() => {
-        // Fallback to cache if offline or network fails
         return caches.match(event.request).then((cachedResponse) => {
           if (cachedResponse) {
             return cachedResponse;
           }
-          // Ultimate fallback for navigation requests
           if (event.request.mode === 'navigate') {
             return caches.match('/index.html');
           }
@@ -67,4 +62,3 @@ self.addEventListener('fetch', (event) => {
       })
   );
 });
-const CACHE_NAME = 'indieflourish-v20'; // Incremented to flush old style cache
