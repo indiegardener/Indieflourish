@@ -234,17 +234,20 @@ label {
   margin-bottom: 4px;
 }
 
-input,
-select,
-textarea {
+input:not([type="checkbox"]):not([type="radio"]), select, textarea {
   width: 100%;
   padding: 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 0.95rem;
   font-family: inherit;
-  background-color: #fffafb;
-  color: var(--text-main);
+  background-color: #faf9f7;
+}
+
+input[type="checkbox"], input[type="radio"] {
+  width: auto;
+  margin-right: 8px;
+  cursor: pointer;
 }
 
 input:focus,
