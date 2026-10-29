@@ -324,19 +324,23 @@
       </div>
     </div>
 
-    <!-- VIEW B: CONNECTIONS & MATCHES LIST -->
-    <div id="view-connections" class="dashboard-view" style="display: none;">
+<!-- VIEW B: CONNECTIONS & MATCHES LIST -->
+    <div id="view-connections" class="dashboard-view hidden">
       <h3 class="connections-heading">Active Connections</h3>
       <div id="accepted-matches-container" class="connections-list">
         <p class="list-status-text">Loading active matches...</p>
       </div>
-      <h3 class="connections-heading top-margin">Pending Requests</h3>
-      <p class="pending-subtext">Tap any incoming request to review and respond.</p>
+
+      <!-- Divider line and gap between Active Connections and Pending Requests -->
+      <hr style="border: none; border-top: 1px solid var(--border); margin: 20px 0;" />
+
+      <h3 class="connections-heading">Pending Requests</h3>
+      <p class="pending-subtext" style="margin-bottom: 8px; font-size: 0.82rem; color: var(--text-muted);">Tap any incoming request to review and respond.</p>
       <div id="pending-matches-container" class="connections-list">
         <p class="list-status-text">Loading pending requests...</p>
       </div>
     </div>
-  </div>
+    
   <!-- SECTION 6: CHAT ENVIRONMENT -->
   <div id="chat-section" class="section">
     <div class="chat-header">
