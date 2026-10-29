@@ -906,6 +906,32 @@ button:hover {
   accent-color: var(--primary);
 }
 
+/* =========================================================================
+   PREFERENCES BUTTON UTILITY STYLES
+   ========================================================================= */
+.preferences-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: 6px;
+  width: auto;
+  margin: 0;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.preferences-btn:hover {
+  background-color: var(--primary-light);
+  color: var(--primary);
+}
+
 /* Photo Upload Thumbnails */
 .card-photo-thumb {
   width: 60px;
