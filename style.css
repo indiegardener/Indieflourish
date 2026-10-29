@@ -173,11 +173,23 @@ body {
   display: flex;
 }
 
-#dashboard-section.active,
-#chat-section.active {
+#dashboard-section.active {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
+}
+
+/* Chat section automatically anchors from top to bottom, ignoring container bottom padding */
+#chat-section.active {
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  top: 12px;
+  left: 14px;
+5  right: 14px;
+  bottom: 12px;
+  z-index: 20;
+  background: var(--bg-color);
 }
 
 .nav-tabs {
@@ -740,7 +752,7 @@ button:hover {
 
 .chat-messages {
   flex-grow: 1;
-  min-height: 200px;
+  min-height: 0px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
