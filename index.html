@@ -352,9 +352,9 @@
     <div id="modal-profile-details" class="profile-details-preview">
       Loading...
     </div>
-    <div class="button-row-gap">
-      <button type="button" id="edit-profile-btn" class="secondary-action-btn">✏️ Edit Profile & Photos</button>
-      <button type="button" id="close-modal-btn" class="flex-1-btn">Close</button>
+    <div class="modal-btn-stack">
+      <button type="button" id="edit-profile-btn" style="background: var(--primary-light); color: var(--primary);">✏️ Edit Profile & Photos</button>
+      <button type="button" id="close-modal-btn">Close</button>
     </div>
   </div>
 </div>
@@ -371,14 +371,7 @@
         <label class="no-margin-label">Distance</label>
         <span id="distance-output" class="distance-output-text">100 km</span>
       </div>
-      <input type="range" id="pref-max-distance" min="10" max="100" step="5" value="100" class="distance-range-input" />
-      <div class="slider-ticks-row">
-        <span>10 km</span>
-        <span>25 km</span>
-        <span>50 km</span>
-        <span>75 km</span>
-        <span>99+ km</span>
-      </div>
+      <input type="range" id="pref-max-distance" min="10" max="100" step="5" value="100" class="distance-range-input" />      
     </div>
 
     <!-- Preferred Age Range -->
@@ -413,9 +406,9 @@
       </select>
     </div>
 
-    <div class="modal-actions-row">
-      <button type="button" id="save-preferences-btn" class="primary-modal-btn">Save Preferences</button>
-      <button type="button" id="close-preferences-modal-btn" class="cancel-modal-btn">Cancel</button>
+    <div class="modal-btn-stack">
+      <button type="button" id="save-preferences-btn" style="background: var(--primary); color: #fff; padding: 12px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Save Preferences</button>
+      <button type="button" id="close-preferences-modal-btn" style="background: var(--text-muted); color: #fff; padding: 12px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">Cancel</button>
     </div>
   </div>
 </div>
@@ -489,9 +482,9 @@
       <label for="edit-prompt-a">Prompt Answer</label>
       <textarea id="edit-prompt-a" rows="2"></textarea>
     </div>
-    <div class="button-row-gap">
-      <button type="button" id="save-edited-profile-btn" class="flex-1-btn">Save Changes</button>
-      <button type="button" id="close-edit-modal-btn" class="cancel-modal-btn">Cancel</button>
+    <div class="modal-btn-stack">
+      <button type="button" id="save-edited-profile-btn">Save Changes</button>
+      <button type="button" id="close-edit-modal-btn" style="background: var(--text-muted);">Cancel</button>
     </div>
   </div>
 </div>
@@ -507,9 +500,9 @@
       <label for="bio-comment-input">Your Note / Reaction</label>
       <textarea id="bio-comment-input" rows="3" placeholder="Share what resonated with you about their reflection..."></textarea>
     </div>
-    <div class="button-row-gap-lg">
-      <button type="button" id="send-comment-connect-btn" class="primary-modal-btn">Send Note & Connect (♥)</button>
-      <button type="button" id="cancel-comment-btn" class="cancel-outline-btn">Cancel</button>
+    <div class="modal-btn-stack">
+      <button type="button" id="send-comment-connect-btn" style="background: var(--primary); color: #ffffff;">Send Note & Connect (♥)</button>
+      <button type="button" id="cancel-comment-btn" style="background: #ffffff; color: var(--text-muted); border: 1px solid var(--border);">Cancel</button>
     </div>
   </div>
 </div>
@@ -533,9 +526,9 @@
       <label for="report-details">Additional Details (Optional)</label>
       <textarea id="report-details" rows="3" placeholder="Describe the situation..."></textarea>
     </div>
-    <div class="button-row-gap">
-      <button type="button" id="submit-report-btn" class="danger-btn">Submit Report</button>
-      <button type="button" id="close-report-modal-btn" class="cancel-modal-btn">Cancel</button>
+    <div class="modal-btn-stack">
+      <button type="button" id="submit-report-btn" style="background: #d9534f; color: #ffffff;">Submit Report</button>
+      <button type="button" id="close-report-modal-btn" style="background: var(--text-muted); color: #ffffff;">Cancel</button>
     </div>
   </div>
 </div>
@@ -567,12 +560,11 @@
     <p class="modal-subtitle">This user sent you a connection request.</p>
     
     <div id="review-profile-body" class="review-profile-card"></div>
-    <div class="button-row-gap-lg">
-      <button type="button" id="review-pass-btn" class="pass-outline-btn">Pass (✕)</button>
-      <button type="button" id="review-connect-btn" class="primary-modal-btn">Accept (♥)</button>
+    <div class="modal-btn-stack">
+      <button type="button" id="review-pass-btn" style="background: #ffffff; color: #d9534f; border: 1px solid #f5c6cb;">Pass (✕)</button>
+      <button type="button" id="review-connect-btn" style="background: var(--primary); color: #ffffff;">Accept (♥)</button>
+      <button type="button" id="close-review-modal-btn" style="background: transparent; color: var(--text-muted); border: none; font-size: 0.85rem;">Cancel</button>
     </div>
-    <button type="button" id="close-review-modal-btn" class="transparent-cancel-btn">Cancel</button>
-  </div>
 </div>
 
 <!-- Partner Profile & Unmatch Modal -->
@@ -580,8 +572,10 @@
   <div class="modal-content modal-max-440">
     <h3 class="modal-title">Match Profile</h3>
     <div id="partner-profile-body" class="review-profile-card"></div>
-    <button type="button" id="unmatch-btn" class="unmatch-danger-btn">Unmatch Connection</button>
-    <button type="button" id="close-partner-modal-btn" class="primary-modal-btn">Close</button>
+    <div class="modal-btn-stack">
+      <button type="button" id="unmatch-btn" style="background-color: #ffffff; color: #d9534f; border: 1px solid #f5c6cb;">Unmatch Connection</button>
+      <button type="button" id="close-partner-modal-btn" style="background: var(--primary); color: #ffffff;">Close</button>
+    </div>
   </div>
 </div>
 
