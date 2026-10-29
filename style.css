@@ -922,6 +922,48 @@ button:hover {
   flex-wrap: wrap;
 }
 
+/* Enhanced Photo Thumbnail Grid for Setup & Onboarding */
+.photo-thumb-wrapper {
+  position: relative;
+  display: inline-block;
+  margin-right: 8px;
+  margin-bottom: 8px;
+}
+
+.photo-thumb-wrapper .card-photo-thumb {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.remove-setup-photo-btn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #d9534f;
+  color: #ffffff;
+  border: none;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease;
+}
+
+.remove-setup-photo-btn:hover {
+  transform: scale(1.1);
+  background: #c9302c;
+}
+
 /* QR Code & Direct Transfer Callout Box */
 .donate-qr-container {
   text-align: center;
