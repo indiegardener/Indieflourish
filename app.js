@@ -112,7 +112,6 @@ function calculateAge(dobString) {
 /* =========================================================================
    SECTION 3: NAVIGATION & VIEW SWITCHING MANAGER
    ========================================================================= */
-
 // Manages visibility across app views (Auth, Onboarding, Quiz, Dashboard, Chat)
 function showSection(sectionId) {
   const sections = [
@@ -137,7 +136,6 @@ function showSection(sectionId) {
   if (activeEl) {
     activeEl.classList.add('active');
   }
-
   // AUTO-TRIGGER: If navigating to profile setup, automatically fetch GPS location on load
   if (sectionId === 'profile-section') {
     const locInput = document.getElementById('location');
@@ -145,17 +143,13 @@ function showSection(sectionId) {
       detectUserGeolocation('location');
     }
   }
-
-  const menuContainer = document.getElementById('header-menu-container');
-  const donateBtn = document.getElementById('header-donate-btn');
   
-  // Toggle header navigation menu & donate button visibility based on dashboard state
-  if (menuContainer && donateBtn) {
+  const actionsWrapper = document.getElementById('header-actions-wrapper');
+  if (actionsWrapper) {
     const isDashboard = (sectionId === 'dashboard-section' || sectionId === 'chat-section');
-    menuContainer.style.display = isDashboard ? 'block' : 'none';
-    donateBtn.style.display = isDashboard ? 'inline-block' : 'none';
+    actionsWrapper.style.display = isDashboard ? 'flex' : 'none';
   }
-
+  
   const actionBar = document.getElementById('sticky-action-bar');
   if (actionBar) {
     actionBar.style.display = (sectionId === 'dashboard-section' && document.getElementById('view-discover').style.display !== 'none' && currentCardIndex < availableProfiles.length) ? 'flex' : 'none';
