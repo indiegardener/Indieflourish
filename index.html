@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Indieflourish — Human-First Connection</title>
-
+  
   <!-- Google Analytics (GA4) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
   <script>
@@ -21,21 +21,19 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Indieflourish" />
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
-
-  <link rel="stylesheet" href="style.css?v=18" />
+  <link rel="stylesheet" href="style.css?v=19" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-
 <div id="app-container">
-  <!-- Top Navigation Header -->
+
+  <!-- TOP NAVIGATION HEADER -->
   <header class="app-header">
     <h1 class="brand-title">Indieflourish</h1>
     
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <button type="button" id="header-donate-btn" class="donate-btn" style="display: none;">❤️ Donate</button>
-
-      <div class="menu-container" id="header-menu-container" style="display: none;">
+    <div class="header-actions">
+      <button type="button" id="header-donate-btn" class="donate-btn hidden">❤️ Donate</button>
+      <div class="menu-container" id="header-menu-container">
         <button type="button" class="menu-btn" id="menu-toggle-btn" title="Menu">☰</button>
         <div id="dropdown-menu" class="dropdown-menu">
           <button type="button" class="dropdown-item" id="menu-profile-preview">Profile</button>
@@ -51,7 +49,7 @@
   <!-- SECTION 1: AUTHENTICATION -->
   <div id="auth-section" class="section active">
     <h2>Welcome</h2>
-    <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">
+    <p class="section-subtitle">
       Sign in with your email to receive a secure verification link.
     </p>
     <div class="form-group">
@@ -65,27 +63,25 @@
   <!-- SECTION 2: PROFILE SETUP -->
   <div id="profile-section" class="section">
     <h2>Complete Your Profile</h2>
-    <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
+    <p class="section-subtitle">
       Authentic profiles lead to meaningful matches.
     </p>
     <div class="form-group">
       <label for="full-name">Full Name or Preferred Name *</label>
       <input type="text" id="full-name" placeholder="e.g. Shashi" required />
-   </div>
-
-<div class="form-group">
-  <label for="dob">Date of Birth *</label>
-  <input type="date" id="dob" required />
-</div>
-    
+    </div>
+    <div class="form-group">
+      <label for="dob">Date of Birth *</label>
+      <input type="date" id="dob" required />
+    </div>
     <div class="form-group">
       <label for="location">Location (GPS Auto-Detected) *</label>
-      <div style="display: flex; gap: 10px; align-items: center;">
-        <input type="text" id="location" placeholder="Detecting location..." readonly required style="background: #f9f9f9; color: var(--text-muted);" />
-        <button type="button" id="detect-location-btn" class="back-btn" style="white-space: nowrap; padding: 10px 14px;">📍 Detect My Location Automatically</button>
+      <div class="input-with-action">
+        <input type="text" id="location" placeholder="Detecting location..." readonly required class="read-only-input" />
+        <button type="button" id="detect-location-btn" class="back-btn nowrap-btn">📍 Detect Location</button>
       </div>
     </div>
-   <div class="form-group">
+    <div class="form-group">
       <label for="intent">Connection Intent *</label>
       <select id="intent">
         <option value="both">Both Romantic & Platonic</option>
@@ -97,14 +93,14 @@
       <label for="bio">Personal Reflection (Max 500 chars)</label>
       <textarea id="bio" rows="3" placeholder="Share what brings you joy, your quiet routines, or what you hope to cultivate..."></textarea>
     </div>
-
-    <!-- Profile Details -->
-    <div style="background: #faf9f7; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 18px;">
-      <h3 style="font-size: 0.95rem; color: var(--primary); margin-bottom: 12px;">Profile Details (Basics, Lifestyle, Identity)</h3>
+    
+    <!-- Profile Details Card -->
+    <div class="details-section-card">
+      <h3 class="details-section-title">Profile Details (Basics, Lifestyle, Identity)</h3>
       
-      <h4 style="font-size: 0.85rem; color: var(--accent); margin-bottom: 8px; text-transform: uppercase;">Basics & Looks</h4>
+      <h4 class="details-category-header">Basics & Looks</h4>
       <div class="form-group">
-        <label>Gender</label>
+        <label for="gender">Gender</label>
         <select id="gender">
           <option value="">Prefer not to say</option>
           <option value="Man">Man</option>
@@ -114,11 +110,11 @@
         </select>
       </div>
       <div class="form-group">
-        <label>Pronouns</label>
+        <label for="pronouns">Pronouns</label>
         <input type="text" id="pronouns" placeholder="e.g. He/Him, She/Her, They/Them" />
       </div>
       <div class="form-group">
-        <label>Orientation</label>
+        <label for="orientation">Orientation</label>
         <select id="orientation">
           <option value="">Prefer not to say</option>
           <option value="Straight">Straight</option>
@@ -131,7 +127,7 @@
         </select>
       </div>
       <div class="form-group">
-        <label>Relationship Type</label>
+        <label for="relationship_status">Relationship Type</label>
         <select id="relationship_status">
           <option value="">Prefer not to say</option>
           <option value="Monogamous, Single">Monogamous, Single</option>
@@ -140,21 +136,21 @@
         </select>
       </div>
       <div class="form-group">
-        <label>Height</label>
+        <label for="height">Height</label>
         <input type="text" id="height" placeholder="e.g. 172 cm" />
       </div>
 
-      <h4 style="font-size: 0.85rem; color: var(--accent); margin-top: 14px; margin-bottom: 8px; text-transform: uppercase;">Background & Identity</h4>
+      <h4 class="details-category-header">Background & Identity</h4>
       <div class="form-group">
-        <label>Education / College</label>
+        <label for="education">Education / College</label>
         <input type="text" id="education" placeholder="e.g. Visva Bharati University" />
       </div>
       <div class="form-group">
-        <label>Occupation</label>
+        <label for="occupation">Occupation</label>
         <input type="text" id="occupation" placeholder="e.g. Fine Artist, Designer, Engineer" />
       </div>
       <div class="form-group">
-        <label>Religion / Beliefs</label>
+        <label for="religion">Religion / Beliefs</label>
         <select id="religion">
           <option value="">Prefer not to say</option>
           <option value="Atheism">Atheism</option>
@@ -169,7 +165,7 @@
         </select>
       </div>
       <div class="form-group">
-        <label>Politics</label>
+        <label for="politics">Politics</label>
         <select id="politics">
           <option value="">Prefer not to say</option>
           <option value="Politically liberal">Politically liberal</option>
@@ -180,13 +176,13 @@
         </select>
       </div>
       <div class="form-group">
-        <label>Languages Spoken</label>
+        <label for="languages">Languages Spoken</label>
         <input type="text" id="languages" placeholder="e.g. English, Hindi, Bengali" />
       </div>
 
-      <h4 style="font-size: 0.85rem; color: var(--accent); margin-top: 14px; margin-bottom: 8px; text-transform: uppercase;">Lifestyle & Family</h4>
+      <h4 class="details-category-header">Lifestyle & Family</h4>
       <div class="form-group">
-        <label>Diet</label>
+        <label for="diet">Diet</label>
         <select id="diet">
           <option value="">Prefer not to say</option>
           <option value="Vegetarian">Vegetarian</option>
@@ -196,7 +192,7 @@
         </select>
       </div>
       <div class="form-group">
-        <label>Smoking</label>
+        <label for="smoking">Smoking</label>
         <select id="smoking">
           <option value="">Prefer not to say</option>
           <option value="Never smokes">Never smokes</option>
@@ -205,7 +201,7 @@
         </select>
       </div>
       <div class="form-group">
-        <label>Drinking</label>
+        <label for="drinking">Drinking</label>
         <select id="drinking">
           <option value="">Prefer not to say</option>
           <option value="Never drinks">Never drinks</option>
@@ -214,7 +210,7 @@
         </select>
       </div>
       <div class="form-group">
-        <label>Children</label>
+        <label for="children">Children</label>
         <select id="children">
           <option value="">Prefer not to say</option>
           <option value="Doesn't have kids and doesn't want kids">Doesn't have kids and doesn't want kids</option>
@@ -223,7 +219,7 @@
         </select>
       </div>
       <div class="form-group">
-        <label>Pets</label>
+        <label for="pets">Pets</label>
         <select id="pets">
           <option value="">Prefer not to say</option>
           <option value="Has dog(s)">Has dog(s)</option>
@@ -234,29 +230,37 @@
       </div>
     </div>
 
-    <div class="form-group" style="display: flex; align-items: flex-start; gap: 10px; margin-top: 10px;">
-      <input type="checkbox" id="terms-agree-checkbox" style="width: 18px; height: 18px; margin-top: 2px; cursor: pointer;" required />
-      <label for="terms-agree-checkbox" style="font-size: 0.82rem; color: var(--text-main); font-weight: normal; cursor: pointer; line-height: 1.4;">
-        I agree to the <a href="terms.html" target="_blank" style="color: var(--primary); font-weight: 600;">Terms & Conditions</a> and confirm I will not upload nude/explicit content or engage in harassment.
+    <div class="form-group terms-checkbox-group">
+      <input type="checkbox" id="terms-agree-checkbox" class="terms-checkbox" required />
+      <label for="terms-agree-checkbox" class="terms-label">
+        I agree to the <a href="terms.html" target="_blank" class="primary-link">Terms & Conditions</a> and confirm I will not upload nude/explicit content or engage in harassment.
       </label>
     </div>
-
     <button type="button" id="save-profile-btn" onclick="triggerSaveProfile()">Save Profile & Begin Quiz</button>
   </div>
 
-  <!-- SECTION 2.5: PHOTOS & PROMPT SETUP -->
+  <!-- SECTION 3: VALUES & LIFESTYLE QUESTIONNAIRE -->
+  <div id="quiz-section" class="section">
+    <div class="section-top-bar">
+      <button type="button" id="back-to-profile-btn" class="back-btn fit-content">← Back</button>
+    </div>
+    <div id="quiz-container"></div>
+    <button type="button" id="submit-quiz-btn" class="hidden">Submit Responses</button>
+  </div>
+
+  <!-- SECTION 4: PHOTOS & PROMPT SETUP -->
   <div id="photos-prompt-section" class="section">
-    <div style="display: flex; align-items: center; margin-bottom: 12px;">
-      <button type="button" id="back-to-quiz-btn" class="back-btn" style="width: auto;">← Back to Quiz</button>
+    <div class="section-top-bar">
+      <button type="button" id="back-to-quiz-btn" class="back-btn fit-content">← Back to Quiz</button>
     </div>
     <h2>Add Photos & Prompt</h2>
-    <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
+    <p class="section-subtitle">
       Upload your photos 1 by 1 (up to 5 max) and answer a conversational prompt.
     </p>
     <div class="form-group">
       <label id="photo-upload-label">Profile Photos (<span id="photo-count-indicator">0</span> / 5 added)</label>
       <input type="file" id="photo-upload-input" accept="image/*" />
-      <div id="photo-preview-grid" style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;"></div>
+      <div id="photo-preview-grid" class="photo-preview-grid"></div>
     </div>
     <div class="form-group">
       <label for="setup-prompt-q">Prompt Question</label>
@@ -274,31 +278,21 @@
     <button type="button" id="save-photos-prompt-btn">Complete Setup & Enter Discover</button>
   </div>
 
-<!-- SECTION 3: QUESTIONNAIRE -->
-<div id="quiz-section" class="section">
-  <div style="display: flex; align-items: center; margin-bottom: 12px;">
-    <button type="button" id="back-to-profile-btn" class="back-btn" style="width: auto;">← Back</button>
-  </div>
-  <div id="quiz-container"></div>
-  <button type="button" id="submit-quiz-btn" style="display: none;">Submit Responses</button>
-</div>
-
-  <!-- SECTION 4: DASHBOARD / SWIPE MATCHES -->
+  <!-- SECTION 5: DASHBOARD & DISCOVERY FEED -->
   <div id="dashboard-section" class="section">
     <div class="nav-tabs">
       <button type="button" class="tab-btn active" id="tab-discover-btn">Discover</button>
-      <!-- New Connection and Message indicator-->
-<button type="button" class="tab-btn" id="tab-connections-btn" style="position: relative;">
-  Connections & Matches 
-  <span id="request-badge" class="notif-badge request-badge" style="display: none;">💌 Req</span>
-  <span id="message-badge" class="notif-badge message-badge" style="display: none;">💬 New Msg</span>
-</button>
+      <button type="button" class="tab-btn relative-btn" id="tab-connections-btn">
+        Connections & Matches 
+        <span id="request-badge" class="notif-badge request-badge hidden">💌 Req</span>
+        <span id="message-badge" class="notif-badge message-badge hidden">💬 New Msg</span>
+      </button>
     </div>
 
-<!-- VIEW A: DISCOVER FEED -->
+    <!-- VIEW A: DISCOVER FEED -->
     <div id="view-discover" class="dashboard-view active">
-      <div class="deck-subheader" style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 16px; box-sizing: border-box;">
-        <button type="button" id="open-preferences-modal-btn" style="background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; flex-direction: row; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 500; padding: 0; margin: 0;">
+      <div class="deck-subheader">
+        <button type="button" id="open-preferences-modal-btn" class="preferences-btn">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="4" y1="6" x2="20" y2="6"></line>
             <line x1="4" y1="12" x2="20" y2="12"></line>
@@ -309,75 +303,75 @@
           </svg>
           Preferences
         </button>
-        <span style="font-size: 0.75rem; color: var(--text-muted); white-space: nowrap;">Active Chat: <strong id="active-chat-count">2 / 3</strong></span>
+        <span class="active-chat-indicator">Active Chat: <strong id="active-chat-count">0 / 3</strong></span>
       </div>
-
       <div id="deck-container" class="deck-container">
-        <p style="text-align: center; color: var(--text-muted); padding-top: 140px;">Finding nearby profiles...</p>
+        <p class="feed-status-text">Finding nearby profiles...</p>
       </div>
     </div>
-    <!-- VIEW B: CONNECTIONS & MATCHES LIST -->
-    <div id="view-connections" class="dashboard-view" style="display: none;">
-      <h3 style="font-size: 1.1rem; color: var(--primary); margin-bottom: 12px;">Active Connections</h3>
-      <div id="accepted-matches-container" class="connections-list">
-        <p style="color: var(--text-muted); font-size: 0.88rem;">Loading active matches...</p>
-      </div>
 
-      <h3 style="font-size: 1.1rem; color: var(--primary); margin-top: 24px; margin-bottom: 12px;">Pending Requests</h3>
-      <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">Tap any incoming request to review and respond.</p>
+    <!-- VIEW B: CONNECTIONS & MATCHES LIST -->
+    <div id="view-connections" class="dashboard-view hidden">
+      <h3 class="connections-heading">Active Connections</h3>
+      <div id="accepted-matches-container" class="connections-list">
+        <p class="list-status-text">Loading active matches...</p>
+      </div>
+      <h3 class="connections-heading top-margin">Pending Requests</h3>
+      <p class="pending-subtext">Tap any incoming request to review and respond.</p>
       <div id="pending-matches-container" class="connections-list">
-        <p style="color: var(--text-muted); font-size: 0.88rem;">Loading pending requests...</p>
+        <p class="list-status-text">Loading pending requests...</p>
       </div>
     </div>
   </div>
 
-  <!-- SECTION 5: CHAT ENVIRONMENT -->
+  <!-- SECTION 6: CHAT ENVIRONMENT -->
   <div id="chat-section" class="section">
     <div class="chat-header">
       <button type="button" id="back-to-connections-btn" class="back-btn">← Back</button>
       <div class="chat-title-wrapper" id="chat-header-profile-trigger" title="View Profile & Unmatch">
         <h3 id="chat-partner-name">Partner Name</h3>
-        <span style="font-size: 0.7rem; color: var(--text-muted);">Tap to view profile</span>
+        <span class="chat-subtitle">Tap to view profile</span>
       </div>
     </div>
-
     <div id="chat-messages-container" class="chat-messages"></div>
-
     <div class="chat-input-area">
       <input type="text" id="chat-message-input" placeholder="Type a thoughtful message..." />
       <button type="button" id="send-message-btn">Send</button>
     </div>
   </div>
+
 </div>
 
-<!-- Profile Modal -->
+<!-- MODALS -->
+
+<!-- Profile Preview Modal -->
 <div id="profile-modal" class="modal">
-  <div class="modal-content" style="max-height: 85vh; overflow-y: auto;">
-    <h3 style="color: var(--primary); margin-bottom: 12px;">Your Profile</h3>
-    <div id="modal-profile-details" style="font-size: 0.9rem; color: var(--text-main); margin-bottom: 20px;">
+  <div class="modal-content scrollable-modal">
+    <h3 class="modal-title">Your Profile</h3>
+    <div id="modal-profile-details" class="profile-details-preview">
       Loading...
     </div>
-    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-      <button type="button" id="edit-profile-btn" style="background: var(--primary-light); color: var(--primary);">✏️ Edit Profile & Photos</button>
-      <button type="button" id="close-modal-btn" style="flex: 1;">Close</button>
+    <div class="button-row-gap">
+      <button type="button" id="edit-profile-btn" class="secondary-action-btn">✏️ Edit Profile & Photos</button>
+      <button type="button" id="close-modal-btn" class="flex-1-btn">Close</button>
     </div>
   </div>
 </div>
+
 <!-- Preferences Filter Modal -->
 <div id="preferences-modal" class="modal">
-  <div class="modal-content" style="max-width: 420px;">
-    <h3 style="color: var(--primary); margin-bottom: 8px;">🎚️ Discovery Preferences</h3>
-    <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 16px;">Customize who appears in your Discover feed.</p>
+  <div class="modal-content modal-max-420">
+    <h3 class="modal-title">🎚️ Discovery Preferences</h3>
+    <p class="modal-subtitle">Customize who appears in your Discover feed.</p>
 
-
-<!-- Replace or add inside #preferences-modal in index.html -->
-    <div class="form-group" style="margin-bottom: 18px;">
-      <div style="display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 8px;">
-        <label style="margin-bottom: 0;">Distance</label>
-        <span id="distance-output" style="color: var(--primary); font-weight: 700;">100 km</span>
+    <!-- Distance Slider -->
+    <div class="form-group margin-bottom-lg">
+      <div class="slider-label-row">
+        <label class="no-margin-label">Distance</label>
+        <span id="distance-output" class="distance-output-text">100 km</span>
       </div>
-      <input type="range" id="pref-max-distance" min="10" max="100" step="5" value="100" style="width: 100%; accent-color: var(--primary); cursor: pointer;" />
-      <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--text-muted); margin-top: 4px; padding: 0 2px;">
+      <input type="range" id="pref-max-distance" min="10" max="100" step="5" value="100" class="distance-range-input" />
+      <div class="slider-ticks-row">
         <span>10 km</span>
         <span>25 km</span>
         <span>50 km</span>
@@ -386,19 +380,20 @@
       </div>
     </div>
 
-<div class="form-group" style="margin-top: 14px;">
-  <label style="font-weight: 600; margin-bottom: 6px; display: block;">Preferred Age Range</label>
-  <div style="display: flex; gap: 10px; align-items: center;">
-    <input type="number" id="pref-min-age" min="18" max="100" value="18" placeholder="Min" style="width: 50%; padding: 8px; border-radius: 6px; border: 1px solid var(--border);" />
-    <span style="color: var(--text-muted);">to</span>
-    <input type="number" id="pref-max-age" min="18" max="100" value="99" placeholder="Max" style="width: 50%; padding: 8px; border-radius: 6px; border: 1px solid var(--border);" />
-  </div>
-</div>
-    
+    <!-- Preferred Age Range -->
+    <div class="form-group margin-top-md">
+      <label class="block-label">Preferred Age Range</label>
+      <div class="age-inputs-row">
+        <input type="number" id="pref-min-age" min="18" max="100" value="18" placeholder="Min" class="age-input" />
+        <span class="text-muted">to</span>
+        <input type="number" id="pref-max-age" min="18" max="100" value="99" placeholder="Max" class="age-input" />
+      </div>
+    </div>
 
+    <!-- Preferred Genders -->
     <div class="form-group">
-      <label style="font-weight: 600; margin-bottom: 6px; display: block;">Preferred Genders</label>
-      <div style="display: flex; flex-direction: column; gap: 6px;" id="pref-gender-checkboxes">
+      <label class="block-label">Preferred Genders</label>
+      <div class="checkbox-stack" id="pref-gender-checkboxes">
         <label><input type="checkbox" value="Man" checked /> Men</label>
         <label><input type="checkbox" value="Woman" checked /> Women</label>
         <label><input type="checkbox" value="Non-binary" checked /> Non-binary</label>
@@ -406,9 +401,10 @@
       </div>
     </div>
 
-    <div class="form-group" style="margin-top: 14px;">
-      <label style="font-weight: 600; margin-bottom: 6px; display: block;">Relationship Intent</label>
-      <select id="pref-intent-select" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border);">
+    <!-- Relationship Intent -->
+    <div class="form-group margin-top-md">
+      <label class="block-label">Relationship Intent</label>
+      <select id="pref-intent-select">
         <option value="all">Show All Intents</option>
         <option value="both">Both Romantic & Platonic</option>
         <option value="platonic">Platonic Friendships Only</option>
@@ -416,34 +412,34 @@
       </select>
     </div>
 
-    <div style="display: flex; gap: 10px; margin-top: 20px;">
-      <button type="button" id="save-preferences-btn" style="background: var(--primary); color: #fff; flex: 1; padding: 10px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">Save Preferences</button>
-      <button type="button" id="close-preferences-modal-btn" style="background: var(--text-muted); color: #fff; flex: 1; padding: 10px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">Cancel</button>
+    <div class="modal-actions-row">
+      <button type="button" id="save-preferences-btn" class="primary-modal-btn">Save Preferences</button>
+      <button type="button" id="close-preferences-modal-btn" class="cancel-modal-btn">Cancel</button>
     </div>
   </div>
-</div>  
+</div>
 
 <!-- Edit Profile Modal -->
 <div id="edit-profile-modal" class="modal">
-  <div class="modal-content" style="max-height: 85vh; overflow-y: auto;">
-    <h3 style="color: var(--primary); margin-bottom: 12px;">Edit Profile</h3>
+  <div class="modal-content scrollable-modal">
+    <h3 class="modal-title">Edit Profile</h3>
     <div class="form-group">
-      <label>Full Name</label>
+      <label for="edit-full-name">Full Name</label>
       <input type="text" id="edit-full-name" />
     </div>
-<div class="form-group">
-  <label for="dob">Date of Birth *</label>
-  <input type="date" id="dob" required />
-</div>    
     <div class="form-group">
-      <label>Location (GPS Auto-Detected)</label>
-      <div style="display: flex; gap: 10px; align-items: center;">
-        <input type="text" id="edit-location" readonly style="background: #f9f9f9; color: var(--text-muted);" />
-        <button type="button" id="edit-detect-location-btn" class="back-btn" style="white-space: nowrap; padding: 10px 14px;">📍 Update GPS</button>
+      <label for="edit-dob">Date of Birth *</label>
+      <input type="date" id="edit-dob" required />
+    </div>
+    <div class="form-group">
+      <label for="edit-location">Location (GPS Auto-Detected)</label>
+      <div class="input-with-action">
+        <input type="text" id="edit-location" readonly class="read-only-input" />
+        <button type="button" id="edit-detect-location-btn" class="back-btn nowrap-btn">📍 Update GPS</button>
       </div>
     </div>
     <div class="form-group">
-      <label>Intent</label>
+      <label for="edit-intent">Intent</label>
       <select id="edit-intent">
         <option value="both">Both</option>
         <option value="platonic">Platonic</option>
@@ -451,36 +447,36 @@
       </select>
     </div>
     <div class="form-group">
-      <label>Bio</label>
+      <label for="edit-bio">Bio</label>
       <textarea id="edit-bio" rows="3"></textarea>
     </div>
-    
-    <div style="background: #faf9f7; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 14px;">
-      <h4 style="font-size: 0.9rem; color: var(--primary); margin-bottom: 10px;">Edit Profile Details</h4>
-      <div class="form-group"><label>Gender</label><select id="edit-gender"><option value="">Prefer not to say</option><option value="Man">Man</option><option value="Woman">Woman</option><option value="Non-binary">Non-binary</option><option value="Other">Other</option></select></div>
-      <div class="form-group"><label>Pronouns</label><input type="text" id="edit-pronouns" /></div>
-      <div class="form-group"><label>Orientation</label><select id="edit-orientation"><option value="">Prefer not to say</option><option value="Straight">Straight</option><option value="Gay">Gay</option><option value="Lesbian">Lesbian</option><option value="Bisexual">Bisexual</option><option value="Pansexual">Pansexual</option><option value="Asexual">Asexual</option><option value="Queer">Queer</option></select></div>
-      <div class="form-group"><label>Relationship Type</label><select id="edit-relationship_status"><option value="">Prefer not to say</option><option value="Monogamous, Single">Monogamous, Single</option><option value="Non-monogamous">Non-monogamous</option><option value="Open to all">Open to all</option></select></div>
-      <div class="form-group"><label>Height</label><input type="text" id="edit-height" /></div>
-      <div class="form-group"><label>Education</label><input type="text" id="edit-education" /></div>
-      <div class="form-group"><label>Occupation</label><input type="text" id="edit-occupation" /></div>
-      <div class="form-group"><label>Religion</label><select id="edit-religion"><option value="">Prefer not to say</option><option value="Atheism">Atheism</option><option value="Agnosticism">Agnosticism</option><option value="Hinduism">Hinduism</option><option value="Buddhism">Buddhism</option><option value="Islam">Islam</option><option value="Christianity">Christianity</option><option value="Sikhism">Sikhism</option><option value="Spiritual">Spiritual</option><option value="Other">Other</option></select></div>
-      <div class="form-group"><label>Politics</label><select id="edit-politics"><option value="">Prefer not to say</option><option value="Politically liberal">Politically liberal</option><option value="Politically moderate">Politically moderate</option><option value="Politically conservative">Politically conservative</option><option value="Apolitical">Apolitical</option><option value="Other political beliefs">Other political beliefs</option></select></div>
-      <div class="form-group"><label>Languages</label><input type="text" id="edit-languages" /></div>
-      <div class="form-group"><label>Diet</label><select id="edit-diet"><option value="">Prefer not to say</option><option value="Vegetarian">Vegetarian</option><option value="Vegan">Vegan</option><option value="Omnivore">Omnivore</option><option value="Eggetarian">Eggetarian</option></select></div>
-      <div class="form-group"><label>Smoking</label><select id="edit-smoking"><option value="">Prefer not to say</option><option value="Never smokes">Never smokes</option><option value="Smokes sometimes">Smokes sometimes</option><option value="Regular smoker">Regular smoker</option></select></div>
-      <div class="form-group"><label>Drinking</label><select id="edit-drinking"><option value="">Prefer not to say</option><option value="Never drinks">Never drinks</option><option value="Drinks sometimes">Drinks sometimes</option><option value="Regularly drinks">Regularly drinks</option></select></div>
-      <div class="form-group"><label>Children</label><select id="edit-children"><option value="">Prefer not to say</option><option value="Doesn't have kids and doesn't want kids">Doesn't have kids and doesn't want kids</option><option value="Doesn't have kids but wants them">Doesn't have kids but wants them</option><option value="Has kids">Has kids</option></select></div>
-      <div class="form-group"><label>Pets</label><select id="edit-pets"><option value="">Prefer not to say</option><option value="Has dog(s)">Has dog(s)</option><option value="Has cat(s)">Has cat(s)</option><option value="Has other pets">Has other pets</option><option value="No pets">No pets</option></select></div>
+
+    <div class="details-section-card">
+      <h4 class="details-card-heading">Edit Profile Details</h4>
+      <div class="form-group"><label for="edit-gender">Gender</label><select id="edit-gender"><option value="">Prefer not to say</option><option value="Man">Man</option><option value="Woman">Woman</option><option value="Non-binary">Non-binary</option><option value="Other">Other</option></select></div>
+      <div class="form-group"><label for="edit-pronouns">Pronouns</label><input type="text" id="edit-pronouns" /></div>
+      <div class="form-group"><label for="edit-orientation">Orientation</label><select id="edit-orientation"><option value="">Prefer not to say</option><option value="Straight">Straight</option><option value="Gay">Gay</option><option value="Lesbian">Lesbian</option><option value="Bisexual">Bisexual</option><option value="Pansexual">Pansexual</option><option value="Asexual">Asexual</option><option value="Queer">Queer</option></select></div>
+      <div class="form-group"><label for="edit-relationship_status">Relationship Type</label><select id="edit-relationship_status"><option value="">Prefer not to say</option><option value="Monogamous, Single">Monogamous, Single</option><option value="Non-monogamous">Non-monogamous</option><option value="Open to all">Open to all</option></select></div>
+      <div class="form-group"><label for="edit-height">Height</label><input type="text" id="edit-height" /></div>
+      <div class="form-group"><label for="edit-education">Education</label><input type="text" id="edit-education" /></div>
+      <div class="form-group"><label for="edit-occupation">Occupation</label><input type="text" id="edit-occupation" /></div>
+      <div class="form-group"><label for="edit-religion">Religion</label><select id="edit-religion"><option value="">Prefer not to say</option><option value="Atheism">Atheism</option><option value="Agnosticism">Agnosticism</option><option value="Hinduism">Hinduism</option><option value="Buddhism">Buddhism</option><option value="Islam">Islam</option><option value="Christianity">Christianity</option><option value="Sikhism">Sikhism</option><option value="Spiritual">Spiritual</option><option value="Other">Other</option></select></div>
+      <div class="form-group"><label for="edit-politics">Politics</label><select id="edit-politics"><option value="">Prefer not to say</option><option value="Politically liberal">Politically liberal</option><option value="Politically moderate">Politically moderate</option><option value="Politically conservative">Politically conservative</option><option value="Apolitical">Apolitical</option><option value="Other political beliefs">Other political beliefs</option></select></div>
+      <div class="form-group"><label for="edit-languages">Languages</label><input type="text" id="edit-languages" /></div>
+      <div class="form-group"><label for="edit-diet">Diet</label><select id="edit-diet"><option value="">Prefer not to say</option><option value="Vegetarian">Vegetarian</option><option value="Vegan">Vegan</option><option value="Omnivore">Omnivore</option><option value="Eggetarian">Eggetarian</option></select></div>
+      <div class="form-group"><label for="edit-smoking">Smoking</label><select id="edit-smoking"><option value="">Prefer not to say</option><option value="Never smokes">Never smokes</option><option value="Smokes sometimes">Smokes sometimes</option><option value="Regular smoker">Regular smoker</option></select></div>
+      <div class="form-group"><label for="edit-drinking">Drinking</label><select id="edit-drinking"><option value="">Prefer not to say</option><option value="Never drinks">Never drinks</option><option value="Drinks sometimes">Drinks sometimes</option><option value="Regularly drinks">Regularly drinks</option></select></div>
+      <div class="form-group"><label for="edit-children">Children</label><select id="edit-children"><option value="">Prefer not to say</option><option value="Doesn't have kids and doesn't want kids">Doesn't have kids and doesn't want kids</option><option value="Doesn't have kids but wants them">Doesn't have kids but wants them</option><option value="Has kids">Has kids</option></select></div>
+      <div class="form-group"><label for="edit-pets">Pets</label><select id="edit-pets"><option value="">Prefer not to say</option><option value="Has dog(s)">Has dog(s)</option><option value="Has cat(s)">Has cat(s)</option><option value="Has other pets">Has other pets</option><option value="No pets">No pets</option></select></div>
     </div>
 
     <div class="form-group">
       <label>Photos (Max 5 - Click ✕ to remove)</label>
       <input type="file" id="edit-photo-input" accept="image/*" />
-      <div id="edit-photo-preview" style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;"></div>
+      <div id="edit-photo-preview" class="photo-preview-grid"></div>
     </div>
     <div class="form-group">
-      <label>Prompt Question</label>
+      <label for="edit-prompt-q">Prompt Question</label>
       <select id="edit-prompt-q">
         <option value="A simple joy that always grounds me is...">A simple joy that always grounds me is...</option>
         <option value="My ideal Sunday looks like...">My ideal Sunday looks like...</option>
@@ -489,41 +485,39 @@
       </select>
     </div>
     <div class="form-group">
-      <label>Prompt Answer</label>
+      <label for="edit-prompt-a">Prompt Answer</label>
       <textarea id="edit-prompt-a" rows="2"></textarea>
     </div>
-    <div style="display: flex; gap: 10px;">
-      <button type="button" id="save-edited-profile-btn" style="flex: 1;">Save Changes</button>
-      <button type="button" id="close-edit-modal-btn" style="background: var(--text-muted); flex: 1;">Cancel</button>
+    <div class="button-row-gap">
+      <button type="button" id="save-edited-profile-btn" class="flex-1-btn">Save Changes</button>
+      <button type="button" id="close-edit-modal-btn" class="cancel-modal-btn">Cancel</button>
     </div>
   </div>
 </div>
 
 <!-- Bio Comment Modal -->
 <div id="bio-comment-modal" class="modal">
-  <div class="modal-content" style="max-width: 440px;">
-    <h3 style="color: var(--primary); margin-bottom: 4px;">Connect with a Thoughtful Note</h3>
-    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 16px;">Replying to this profile's bio or prompt will automatically send a connection request (♥).</p>
+  <div class="modal-content modal-max-440">
+    <h3 class="modal-title">Connect with a Thoughtful Note</h3>
+    <p class="modal-subtitle">Replying to this profile's bio or prompt will automatically send a connection request (♥).</p>
     
-    <div id="comment-target-bio" style="background: #faf9f7; border: 1px solid var(--border); padding: 14px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 16px; font-style: italic;"></div>
-
+    <div id="comment-target-bio" class="comment-target-box"></div>
     <div class="form-group">
       <label for="bio-comment-input">Your Note / Reaction</label>
       <textarea id="bio-comment-input" rows="3" placeholder="Share what resonated with you about their reflection..."></textarea>
     </div>
-
-    <div style="display: flex; gap: 12px;">
-      <button type="button" id="send-comment-connect-btn" style="background: var(--primary); color: #ffffff; flex: 1;">Send Note & Connect (♥)</button>
-      <button type="button" id="cancel-comment-btn" style="background: #ffffff; color: var(--text-muted); border: 1px solid var(--border); flex: 1;">Cancel</button>
+    <div class="button-row-gap-lg">
+      <button type="button" id="send-comment-connect-btn" class="primary-modal-btn">Send Note & Connect (♥)</button>
+      <button type="button" id="cancel-comment-btn" class="cancel-outline-btn">Cancel</button>
     </div>
   </div>
 </div>
 
 <!-- Report Modal -->
 <div id="report-modal" class="modal">
-  <div class="modal-content" style="max-width: 420px;">
-    <h3 style="color: #d9534f; margin-bottom: 6px;">🚩 Report User</h3>
-    <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 14px;">Help us keep Indieflourish safe and respectful.</p>
+  <div class="modal-content modal-max-420">
+    <h3 class="report-modal-title">🚩 Report User</h3>
+    <p class="modal-subtitle">Help us keep Indieflourish safe and respectful.</p>
     
     <div class="form-group">
       <label for="report-reason">Reason for Report</label>
@@ -534,71 +528,64 @@
         <option value="other">Other Violation</option>
       </select>
     </div>
-
     <div class="form-group">
       <label for="report-details">Additional Details (Optional)</label>
       <textarea id="report-details" rows="3" placeholder="Describe the situation..."></textarea>
     </div>
-
-    <div style="display: flex; gap: 10px;">
-      <button type="button" id="submit-report-btn" style="background: #d9534f; color: #ffffff; flex: 1;">Submit Report</button>
-      <button type="button" id="close-report-modal-btn" style="background: var(--text-muted); color: #ffffff; flex: 1;">Cancel</button>
+    <div class="button-row-gap">
+      <button type="button" id="submit-report-btn" class="danger-btn">Submit Report</button>
+      <button type="button" id="close-report-modal-btn" class="cancel-modal-btn">Cancel</button>
     </div>
   </div>
 </div>
 
 <!-- Donate Modal -->
 <div id="donate-modal" class="modal">
-  <div class="modal-content" style="max-width: 440px; text-align: center;">
-    <h3 style="color: var(--primary); margin-bottom: 8px;">Support Indieflourish ❤️</h3>
-    <p style="font-size: 0.88rem; color: var(--text-main); margin-bottom: 14px; line-height: 1.5;">
+  <div class="modal-content text-center-modal">
+    <h3 class="modal-title">Support Indieflourish ❤️</h3>
+    <p class="donate-description">
       Indieflourish is 100% open-source, non-profit, and free of paywalls. Your support directly helps us cover server costs, domain maintenance, and continuous safety enhancements!
     </p>
-
-    <div style="background: #faf9f7; border: 1px solid var(--border); padding: 16px; border-radius: 8px; margin-bottom: 16px;">
-      <p style="font-weight: 700; color: var(--primary); margin-bottom: 6px;">Support via UPI / Direct Transfer</p>
-      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">Scan with any UPI App or use the ID below:</p>
+    <div class="donate-upi-card">
+      <p class="upi-heading">Support via UPI / Direct Transfer</p>
+      <p class="upi-subtext">Scan with any UPI App or use the ID below:</p>
       
-      <div style="margin: 12px 0;">
-        <img src="qr.png" alt="UPI QR Code" style="width: 160px; height: 160px; border-radius: 8px; border: 1px solid var(--border);" />
+      <div class="qr-container">
+        <img src="qr.png" alt="UPI QR Code" class="qr-code-img" />
       </div>
-
-      <code style="background: #eaf1ed; color: var(--primary); padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 0.95rem; display: inline-block;">inflourish@ptyes</code>
+      <code class="upi-id-badge">inflourish@ptyes</code>
     </div>
-
-    <button type="button" id="close-donate-modal-btn" style="background: var(--primary); color: #ffffff;">Close</button>
+    <button type="button" id="close-donate-modal-btn" class="primary-modal-btn">Close</button>
   </div>
 </div>
 
 <!-- Incoming Profile Review Modal -->
 <div id="review-modal" class="modal">
-  <div class="modal-content" style="max-width: 440px;">
-    <h3 style="color: var(--primary); margin-bottom: 4px;">Review Incoming Like</h3>
-    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 16px;">This user sent you a connection request.</p>
+  <div class="modal-content modal-max-440">
+    <h3 class="modal-title">Review Incoming Like</h3>
+    <p class="modal-subtitle">This user sent you a connection request.</p>
     
-    <div id="review-profile-body" style="background: #faf9f7; border: 1px solid var(--border); padding: 16px; border-radius: 10px; margin-bottom: 20px;"></div>
-
-    <div style="display: flex; gap: 12px;">
-      <button type="button" id="review-pass-btn" style="background: #ffffff; color: #d9534f; border: 1px solid #f5c6cb; flex: 1;">Pass (✕)</button>
-      <button type="button" id="review-connect-btn" style="background: var(--primary); color: #ffffff; flex: 1;">Accept (♥)</button>
+    <div id="review-profile-body" class="review-profile-card"></div>
+    <div class="button-row-gap-lg">
+      <button type="button" id="review-pass-btn" class="pass-outline-btn">Pass (✕)</button>
+      <button type="button" id="review-connect-btn" class="primary-modal-btn">Accept (♥)</button>
     </div>
-    <button type="button" id="close-review-modal-btn" style="background: transparent; color: var(--text-muted); border: none; margin-top: 10px; font-size: 0.85rem;">Cancel</button>
+    <button type="button" id="close-review-modal-btn" class="transparent-cancel-btn">Cancel</button>
   </div>
 </div>
 
 <!-- Partner Profile & Unmatch Modal -->
 <div id="partner-profile-modal" class="modal">
-  <div class="modal-content" style="max-width: 440px;">
-    <h3 style="color: var(--primary); margin-bottom: 12px;">Match Profile</h3>
-    <div id="partner-profile-body" style="background: #faf9f7; border: 1px solid var(--border); padding: 16px; border-radius: 10px; margin-bottom: 20px;"></div>
-    <button type="button" id="unmatch-btn" style="background-color: #ffffff; color: #d9534f; border: 1px solid #f5c6cb; margin-bottom: 10px;">Unmatch Connection</button>
-    <button type="button" id="close-partner-modal-btn" style="background: var(--primary); color: #ffffff;">Close</button>
+  <div class="modal-content modal-max-440">
+    <h3 class="modal-title">Match Profile</h3>
+    <div id="partner-profile-body" class="review-profile-card"></div>
+    <button type="button" id="unmatch-btn" class="unmatch-danger-btn">Unmatch Connection</button>
+    <button type="button" id="close-partner-modal-btn" class="primary-modal-btn">Close</button>
   </div>
 </div>
 
 <!-- Main Application Logic -->
-<script src="app.js?v=18"></script>
-
+<script src="app.js?v=19"></script>
 <!-- Service Worker Registration -->
 <script>
   if ('serviceWorker' in navigator) {
