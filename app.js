@@ -165,21 +165,15 @@ function showSection(sectionId) {
 /* =========================================================================
    SECTION 4: APPLICATION INITIALIZATION & EVENT LISTENERS
    ========================================================================= */
-
 window.addEventListener('DOMContentLoaded', async () => {
   // SECTION 4.a: Session Check & Magic Link Auth Handlers
+  showSection('auth-section'); // Explicitly initialize clean default view on startup
+
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (session && session.user) {
     currentUser = session.user;
     window.history.replaceState({}, document.title, window.location.pathname);
     await checkProfileStatus();
-    
-    // Auto-poll unread messages and incoming requests every 12 seconds
-    setInterval(async () => {
-      if (currentUser && typeof checkForUnreadMessages === 'function') {
-        await checkForUnreadMessages();
-      }
-    }, 12000);
   }
   
   const sendBtn = document.getElementById('send-magic-link-btn');
