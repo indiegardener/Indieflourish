@@ -333,6 +333,44 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+   // SECTION 4: Dashboard Tab Switcher & Notification Badge Handlers
+  const discoverTab = document.getElementById('tab-discover-btn');
+  const connectionsTab = document.getElementById('tab-connections-btn');
+  const viewDiscover = document.getElementById('view-discover');
+  const viewConnections = document.getElementById('view-connections');
+  
+  if (discoverTab && connectionsTab) {
+    discoverTab.addEventListener('click', () => {
+      discoverTab.classList.add('active');
+      connectionsTab.classList.remove('active');
+      viewDiscover.style.display = 'flex';
+      viewConnections.style.display = 'none';
+      sessionStorage.setItem('indieflourish_dashboard_tab', 'discover');
+      const actionbar = document.getElementById('sticky-action-bar');
+      if (actionbar && currentCardIndex < availableProfiles.length) {
+        actionbar.style.display = 'flex';
+      }
+    });
+
+    connectionsTab.addEventListener('click', async () => {
+      connectionsTab.classList.add('active');
+      discoverTab.classList.remove('active');
+      viewDiscover.style.display = 'none';
+      viewConnections.style.display = 'flex';
+      sessionStorage.setItem('indieflourish_dashboard_tab', 'connections');
+      const actionbar = document.getElementById('sticky-action-bar');
+      if (actionbar) actionbar.style.display = 'none';
+      
+      // Clear notification badges when viewing connections
+      const requestBadge = document.getElementById('request-badge');
+      const messageBadge = document.getElementById('message-badge');
+      if (requestBadge) requestBadge.style.display = 'none';
+      if (messageBadge) messageBadge.style.display = 'none';
+      
+      await loadConnectionsList();
+    });
+  }
+
   // Feature: Hamburger Navigation Menu Dropdown
   const menuToggleBtn = document.getElementById('menu-toggle-btn');
   const dropdownMenu = document.getElementById('dropdown-menu');
