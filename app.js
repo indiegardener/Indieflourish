@@ -113,8 +113,9 @@ function calculateAge(dobString) {
    SECTION 3: NAVIGATION & VIEW SWITCHING MANAGER
    ========================================================================= */
 
+// Manages visibility across app views (Auth, Onboarding, Quiz, Dashboard, Chat)
 function showSection(sectionId) {
-  const sections = ['auth-section', 'profile-section', 'quiz-section', 'photos-prompt-section', 'dashboard-section', 'chat-section'];
+  const sections = ['auth-section', 'profile-section', 'photos-prompt-section', 'quiz-section', 'dashboard-section', 'chat-section'];
   sections.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.remove('active');
@@ -123,6 +124,7 @@ function showSection(sectionId) {
   const activeEl = document.getElementById(sectionId);
   if (activeEl) activeEl.classList.add('active');
 
+  // AUTO-TRIGGER: If navigating to profile setup, automatically fetch GPS location on load
   if (sectionId === 'profile-section') {
     const locInput = document.getElementById('location');
     if (locInput && (!locInput.value || locInput.value.trim() === '')) {
@@ -133,10 +135,12 @@ function showSection(sectionId) {
   const menuContainer = document.getElementById('header-menu-container');
   const donateBtn = document.getElementById('header-donate-btn');
   
+  // Toggle header navigation menu & donate button visibility:
+  // ONLY display them when the user is inside the main dashboard or chat view.
   if (menuContainer && donateBtn) {
-    const isDashboard = (sectionId === 'dashboard-section' || sectionId === 'chat-section');
-    menuContainer.style.display = isDashboard ? 'block' : 'none';
-    donateBtn.style.display = isDashboard ? 'inline-block' : 'none';
+    const isDashboardOrChat = (sectionId === 'dashboard-section' || sectionId === 'chat-section');
+    menuContainer.style.display = isDashboardOrChat ? 'block' : 'none';
+    donateBtn.style.display = isDashboardOrChat ? 'inline-block' : 'none';
   }
 
   const actionBar = document.getElementById('sticky-action-bar');
