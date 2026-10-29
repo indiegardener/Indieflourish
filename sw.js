@@ -1,4 +1,4 @@
-const CACHE_NAME = 'indieflourish-v1';
+const CACHE_NAME = 'indieflourish-v19';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
