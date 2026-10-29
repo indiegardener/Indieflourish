@@ -705,23 +705,17 @@ button:hover {
   color: var(--text-muted);
 }
 
-.status-tag {
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 10px;
-  text-transform: uppercase;
-  flex-shrink: 0;
-}
+/* =========================================================================
+   CHAT SECTION FULL-HEIGHT & BOTTOM-PINNED INPUT STYLING
+   ========================================================================= */
 
-.status-tag.accepted {
-  background-color: var(--primary-light);
-  color: var(--primary);
-}
-
-.status-tag.pending {
-  background-color: #fff0f3;
-  color: var(--primary);
+#chat-section.section.active {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  height: calc(100vh - 40px);
+  max-height: 850px;
+  box-sizing: border-box;
 }
 
 .chat-header {
@@ -731,6 +725,7 @@ button:hover {
   padding-bottom: 10px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 10px;
+  flex-shrink: 0;
 }
 
 .chat-title-wrapper {
@@ -745,13 +740,12 @@ button:hover {
 
 .chat-messages {
   flex-grow: 1;
-  min-height: 340px;
-  max-height: 420px;
+  min-height: 200px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 8px;
+  padding: 12px;
   background: #fff8f9;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -784,6 +778,9 @@ button:hover {
 .chat-input-area {
   display: flex;
   gap: 6px;
+  flex-shrink: 0;
+  padding-top: 4px;
+  background: transparent;
 }
 
 .chat-input-area input {
