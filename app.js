@@ -1642,85 +1642,59 @@ async function showProfilePreview() {
 // SECTION 9.b: Edit Profile Modal & Unmatch Handlers
 async function openEditProfileModal() {
   const modal = document.getElementById('edit-profile-modal');
-  const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
-  if (!profile) return;
-  document.getElementById('edit-full-name').value = profile.full_name || '';
-  document.getElementById('edit-dob').value = profile.dob || ''; 
-  document.getElementById('edit-location').value = profile.location_name || '';
-  document.getElementById('edit-intent').value = profile.intent || 'both';
-  document.getElementById('edit-bio').value = profile.bio || '';
-  document.getElementById('edit-gender').value = profile.gender || '';
-  document.getElementById('edit-pronouns').value = profile.pronouns || '';
-  document.getElementById('edit-orientation').value = profile.orientation || '';
-  document.getElementById('edit-relationship_status').value = profile.relationship_status || '';
-  document.getElementById('edit-height').value = profile.height || '';
-  document.getElementById('edit-education').value = profile.education || '';
-  document.getElementById('edit-occupation').value = profile.occupation || '';
-  document.getElementById('edit-religion').value = profile.religion || '';
-  document.getElementById('edit-politics').value = profile.politics || '';
-  document.getElementById('edit-languages').value = profile.languages || '';
-  document.getElementById('edit-diet').value = profile.diet || '';
-  document.getElementById('edit-smoking').value = profile.smoking || '';
-  document.getElementById('edit-drinking').value = profile.drinking || '';
-  document.getElementById('edit-children').value = profile.children || '';
-  document.getElementById('edit-pets').value = profile.pets || '';
-  document.getElementById('edit-prompt-q').value = profile.prompt_question || 'A simple joy that always grounds me is...';
-  document.getElementById('edit-prompt-a').value = profile.prompt_answer || '';
-  
+  if (!modal) return;
+
+  const { data: profile, error } = await supabaseClient
+    .from('profiles')
+    .select('*')
+    .eq('id', currentUser.id)
+    .single();
+
+  if (error || !profile) {
+    alert('Error loading profile for editing: ' + (error ? error.message : 'Profile not found'));
+    return;
+  }
+
+  // Safe helper to populate form fields without crashing if an element is missing in HTML
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val !== undefined && val !== null ? val : '';
+  };
+
+  setVal('edit-full-name', profile.full_name);
+  setVal('edit-dob', profile.dob);
+  setVal('edit-location', profile.location_name);
+  setVal('edit-intent', profile.intent || 'both');
+  setVal('edit-bio', profile.bio);
+  setVal('edit-gender', profile.gender);
+  setVal('edit-pronouns', profile.pronouns);
+  setVal('edit-orientation', profile.orientation);
+  setVal('edit-relationship_status', profile.relationship_status);
+  setVal('edit-height', profile.height);
+  setVal('edit-education', profile.education);
+  setVal('edit-occupation', profile.occupation);
+  setVal('edit-religion', profile.religion);
+  setVal('edit-politics', profile.politics);
+  setVal('edit-languages', profile.languages);
+  setVal('edit-diet', profile.diet);
+  setVal('edit-smoking', profile.smoking);
+  setVal('edit-drinking', profile.drinking);
+  setVal('edit-children', profile.children);
+  setVal('edit-pets', profile.pets);
+  setVal('edit-prompt-q', profile.prompt_question || 'A simple joy that always grounds me is...');
+  setVal('edit-prompt-a', profile.prompt_answer);
+
+  // Optional age preference fields if added later
+  setVal('edit-min-age', profile.pref_min_age);
+  setVal('edit-max-age', profile.pref_max_age);
+
   tempLatitude = profile.latitude || null;
   tempLongitude = profile.longitude || null;
   editPhotosTemp = profile.images ? [...profile.images] : [];
+  
   renderEditPhotoThumbnails();
   modal.classList.add('show');
 }
-
-function openPartnerProfileModal(profile) {
-  const modal = document.getElementById('partner-profile-modal');
-  const bodyEl = document.getElementById('partner-profile-body');
-  const intentText = profile.intent ? profile.intent.charAt(0).toUpperCase() + profile.intent.slice(1) : 'Both';
-  let photosHTML = '';
-  if (profile.images && profile.images.length > 0) {
-    photosHTML = `<div style="display:flex; gap:6px; margin: 10px 0; overflow-x:auto;">`;
-    profile.images.forEach(u => { photosHTML += `<img src="${u}" style="width:60px; height:60px; object-fit:cover; border-radius:6px;" />`; });
-    photosHTML += `</div>`;
-  }
-  bodyEl.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
-      <div>
-        <div style="font-size: 1.2rem; font-weight: 700; color: var(--primary);">${escapeHTML(profile.full_name)}</div>
-        <div style="font-size: 0.85rem; color: var(--text-muted);">📍 ${escapeHTML(profile.location_name)}</div>
-      </div>
-      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
-        <div style="background: var(--primary-light); color: var(--primary); font-weight: 700; font-size: 0.8rem; padding: 4px 10px; border-radius: 12px;">Matched Partner</div>
-        <button type="button" onclick="openReportModal('${profile.id}')" style="background:none; border:none; color:#d9534f; font-size:0.75rem; cursor:pointer; padding:0;">🚩 Report User</button>
-      </div>
-    </div>
-    ${photosHTML}
-    <div style="font-size: 0.95rem; color: var(--text-main); background: #fff; padding: 12px; border-radius: 8px; border-left: 3px solid var(--primary); margin-bottom: 10px;">
-      "${escapeHTML(profile.bio || 'No bio provided.')}"
-    </div>
-    ${profile.prompt_question ? `<div style="background:var(--primary-light); padding:10px; border-radius:6px; font-size:0.85rem; margin-bottom:10px;"><strong>${escapeHTML(profile.prompt_question)}</strong><br/>"${escapeHTML(profile.prompt_answer || '')}"</div>` : ''}
-    <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: capitalize;">
-      🌱 Intent: <strong>${escapeHTML(intentText)}</strong>
-    </div>
-  `;
-  modal.classList.add('show');
-}
-
-async function unmatchCurrentConnection() {
-  if (!activeChatConnectionId) return;
-  const { error } = await supabaseClient.from('connections').delete().eq('id', activeChatConnectionId);
-  if (error) {
-    alert('Error unmatching: ' + error.message);
-  } else {
-    document.getElementById('partner-profile-modal').classList.remove('show');
-    alert('Successfully unmatched.');
-    showSection('dashboard-section');
-    await loadConnectionsList();
-    await updateActiveChatCount();
-  }
-}
-
 // SECTION 9.c: Review, Reporting & Account Deletion
 function openReviewModal(connection, profile) {
   currentReviewConnection = connection;
