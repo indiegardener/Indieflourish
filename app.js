@@ -135,8 +135,7 @@ function showSection(sectionId) {
   const menuContainer = document.getElementById('header-menu-container');
   const donateBtn = document.getElementById('header-donate-btn');
   
-  // Toggle header navigation menu & donate button visibility:
-  // ONLY display them when the user is inside the main dashboard or chat view.
+  // Toggle header navigation menu & donate button visibility based on dashboard/chat state
   if (menuContainer && donateBtn) {
     const isDashboardOrChat = (sectionId === 'dashboard-section' || sectionId === 'chat-section');
     menuContainer.style.display = isDashboardOrChat ? 'block' : 'none';
