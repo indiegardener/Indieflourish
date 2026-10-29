@@ -135,11 +135,16 @@ function showSection(sectionId) {
   const menuContainer = document.getElementById('header-menu-container');
   const donateBtn = document.getElementById('header-donate-btn');
   
-  // Toggle header navigation menu & donate button visibility based on dashboard/chat state
-  if (menuContainer && donateBtn) {
+  // Toggle header elements:
+  // - Donate button is ALWAYS visible across all sections so users can support the project.
+  // - Hamburger menu is strictly hidden until the user reaches the dashboard or chat views.
+  if (donateBtn) {
+    donateBtn.style.display = 'inline-block';
+  }
+  
+  if (menuContainer) {
     const isDashboardOrChat = (sectionId === 'dashboard-section' || sectionId === 'chat-section');
     menuContainer.style.display = isDashboardOrChat ? 'block' : 'none';
-    donateBtn.style.display = isDashboardOrChat ? 'inline-block' : 'none';
   }
 
   const actionBar = document.getElementById('sticky-action-bar');
