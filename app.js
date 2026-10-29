@@ -231,7 +231,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // SECTION 4.c: Questionnaire, Feed, Chat, and Modal Action Listeners
+  // SECTION 4.c: Questionnaire, Feed, Chat, Photo Setup Listener and Modal Action Listeners
   const photoInput = document.getElementById('photo-upload-input');
   if (photoInput) {
     photoInput.addEventListener('change', async (e) => {
@@ -244,6 +244,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       const newUrl = await uploadImagesToSupabase(file, 'photo-preview-grid', false);
       if (newUrl) {
         uploadedImageUrlsTemp.push(newUrl);
+        renderSetupPhotoThumbnails();
         updatePhotoCountIndicator();
       }
       photoInput.value = '';
