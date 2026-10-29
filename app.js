@@ -112,8 +112,6 @@ function calculateAge(dobString) {
 /* =========================================================================
    SECTION 3: NAVIGATION & VIEW SWITCHING MANAGER
    ========================================================================= */
-
-// Manages visibility across app views (Auth, Onboarding, Quiz, Dashboard, Chat)
 function showSection(sectionId) {
   const sections = ['auth-section', 'profile-section', 'photos-prompt-section', 'quiz-section', 'dashboard-section', 'chat-section'];
   sections.forEach(id => {
@@ -124,7 +122,6 @@ function showSection(sectionId) {
   const activeEl = document.getElementById(sectionId);
   if (activeEl) activeEl.classList.add('active');
 
-  // AUTO-TRIGGER: If navigating to profile setup, automatically fetch GPS location on load
   if (sectionId === 'profile-section') {
     const locInput = document.getElementById('location');
     if (locInput && (!locInput.value || locInput.value.trim() === '')) {
@@ -132,31 +129,11 @@ function showSection(sectionId) {
     }
   }
 
-  const menuContainer = document.getElementById('header-menu-container');
-  const donateBtn = document.getElementById('header-donate-btn');
-  
-  // Header Navigation & Donate Button Control:
-  // Strictly hide until user reaches main discovery dashboard or chat views.
-  const isDashboardOrChat = (sectionId === 'dashboard-section' || sectionId === 'chat-section');
-  
-  if (menuContainer) {
-    if (isDashboardOrChat) {
-      menuContainer.classList.remove('hidden');
-      menuContainer.style.display = 'block';
-    } else {
-      menuContainer.classList.add('hidden');
-      menuContainer.style.display = 'none';
-    }
-  }
-
-  if (donateBtn) {
-    if (isDashboardOrChat) {
-      donateBtn.classList.remove('hidden');
-      donateBtn.style.display = 'inline-block';
-    } else {
-      donateBtn.classList.add('hidden');
-      donateBtn.style.display = 'none';
-    }
+  // Toggle header actions wrapper visibility (Donate button + Hamburger menu)
+  const headerActionsWrapper = document.getElementById('header-actions-wrapper');
+  if (headerActionsWrapper) {
+    const isDashboardOrChat = (sectionId === 'dashboard-section' || sectionId === 'chat-section');
+    headerActionsWrapper.style.display = isDashboardOrChat ? 'flex' : 'none';
   }
 
   const actionBar = document.getElementById('sticky-action-bar');
