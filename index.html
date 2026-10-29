@@ -278,8 +278,8 @@
     <button type="button" id="save-photos-prompt-btn">Complete Setup & Enter Discover</button>
   </div>
 
-  <!-- SECTION 5: DASHBOARD & DISCOVERY FEED -->
-<div id="dashboard-section" class="section">
+<!-- SECTION 5: DASHBOARD & DISCOVERY FEED -->
+  <div id="dashboard-section" class="section">
     <div class="nav-tabs">
       <button type="button" class="tab-btn active" id="tab-discover-btn">Discover</button>
       <button type="button" class="tab-btn" id="tab-connections-btn">
@@ -288,28 +288,20 @@
       </button>
     </div>
 
-   <!-- VIEW A: DISCOVER FEED -->
+    <!-- VIEW A: DISCOVER FEED -->
     <div id="view-discover" class="dashboard-view active">
-      <!-- ... deck subheader & container ... -->
-    </div>
-    <!-- VIEW B: CONNECTIONS & MATCHES LIST -->
-    <div id="view-connections" class="dashboard-view" style="display: none;">
-      <!-- ... connections list ... -->
-    </div>
-  </div>
-
-<button type="button" id="open-preferences-modal-btn" class="preferences-btn">
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <line x1="4" y1="6" x2="20" y2="6"></line>
-    <line x1="4" y1="12" x2="20" y2="12"></line>
-    <line x1="4" y1="18" x2="20" y2="18"></line>
-    <circle cx="10" cy="6" r="2" fill="currentColor"></circle>
-    <circle cx="16" cy="12" r="2" fill="currentColor"></circle>
-    <circle cx="8" cy="18" r="2" fill="currentColor"></circle>
-  </svg>
-  Preferences
-</button>
-        
+      <div class="deck-subheader">
+        <button type="button" id="open-preferences-modal-btn" class="preferences-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="6" x2="20" y2="6"></line>
+            <line x1="4" y1="12" x2="20" y2="12"></line>
+            <line x1="4" y1="18" x2="20" y2="18"></line>
+            <circle cx="10" cy="6" r="2" fill="currentColor"></circle>
+            <circle cx="16" cy="12" r="2" fill="currentColor"></circle>
+            <circle cx="8" cy="18" r="2" fill="currentColor"></circle>
+          </svg>
+          Preferences
+        </button>
         <span class="active-chat-indicator">Active Chat: <strong id="active-chat-count">0 / 3</strong></span>
       </div>
       <div id="deck-container" class="deck-container">
@@ -318,7 +310,7 @@
     </div>
 
     <!-- VIEW B: CONNECTIONS & MATCHES LIST -->
-    <div id="view-connections" class="dashboard-view hidden">
+    <div id="view-connections" class="dashboard-view" style="display: none;">
       <h3 class="connections-heading">Active Connections</h3>
       <div id="accepted-matches-container" class="connections-list">
         <p class="list-status-text">Loading active matches...</p>
@@ -330,7 +322,6 @@
       </div>
     </div>
   </div>
-
   <!-- SECTION 6: CHAT ENVIRONMENT -->
   <div id="chat-section" class="section">
     <div class="chat-header">
