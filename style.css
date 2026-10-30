@@ -178,6 +178,7 @@ body {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
+  height: 100%;
 }
 
 .nav-tabs {
@@ -745,8 +746,8 @@ button:hover {
 
 .chat-messages {
   flex-grow: 1;
-  min-height: 340px;
-  max-height: 420px;
+  min-height: 0;
+  max-height: none;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -755,7 +756,14 @@ button:hover {
   background: #fff8f9;
   border: 1px solid var(--border);
   border-radius: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
+}
+
+.chat-input-area {
+  display: flex;
+  gap: 6px;
+  margin-top: auto;
+  flex-shrink: 0;
 }
 
 .message-bubble {
@@ -784,6 +792,8 @@ button:hover {
 .chat-input-area {
   display: flex;
   gap: 6px;
+  margin-top: auto;
+  flex-shrink: 0;
 }
 
 .chat-input-area input {
