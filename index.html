@@ -344,28 +344,22 @@
   
 <!-- SECTION 6: CHAT ENVIRONMENT -->
   <div id="chat-section" class="section">
-    <div class="chat-header">
-      <button type="button" id="back-to-connections-btn" class="back-btn">← Back</button>
-      <div class="chat-title-wrapper" id="chat-header-profile-trigger" title="View Profile & Unmatch">
-        <h3 id="chat-partner-name">Partner Name</h3>
-        <span class="chat-subtitle">Tap to view profile</span>
+    <div style="margin-bottom: 8px;">
+      <button type="button" id="back-to-connections-btn" class="back-btn">← Back to Connections</button>
+    </div>
+    <div class="chat-header" id="chat-header-profile-trigger" title="View Profile & Unmatch" style="cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: #ffffff; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px;">
+      <div id="chat-header-avatar-container">
+        <div class="connection-avatar" style="width: 40px; height: 40px; font-size: 1rem;">👤</div>
+      </div>
+      <div class="chat-title-wrapper" style="flex-grow: 1; overflow: hidden;">
+        <h3 id="chat-partner-name" style="font-size: 1rem; color: var(--primary); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Partner Name</h3>
+        <span class="chat-subtitle" style="font-size: 0.78rem; color: var(--text-muted);">Tap to view profile</span>
       </div>
     </div>
-    
-    <!-- Outer container wrapping message history and sticky input area together -->
-    <div id="chat-messages-container" class="chat-messages" style="display: flex; flex-direction: column; flex-grow: 1; justify-content: space-between; height: 100%; min-height: 0;">
-      
-      <!-- Inner scrollable area for chat bubbles -->
-      <div id="chat-bubbles-list" style="overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column; gap: 8px; padding-bottom: 8px;">
-        <!-- Chat message bubbles loaded dynamically by app.js -->
-      </div>
-
-      <!-- Input area embedded directly inside chat-messages-container at the bottom -->
-      <div class="chat-input-area" style="margin-top: auto; padding-top: 8px; border-top: 1px solid var(--border); flex-shrink: 0;">
-        <input type="text" id="chat-message-input" placeholder="Type a thoughtful message..." />
-        <button type="button" id="send-message-btn">Send</button>
-      </div>
-
+    <div id="chat-messages-container" class="chat-messages"></div>
+    <div class="chat-input-area">
+      <input type="text" id="chat-message-input" placeholder="Type a thoughtful message..." />
+      <button type="button" id="send-message-btn">Send</button>
     </div>
   </div>
 
