@@ -1510,8 +1510,19 @@ async function loadConnectionsList() {
 async function openChat(connectionId, partnerProfile) {
   activeChatConnectionId = connectionId;
   activeChatPartner = partnerProfile;
+  
   const nameEl = document.getElementById('chat-partner-name');
   if (nameEl) nameEl.textContent = partnerProfile.full_name;
+  
+  // Dynamically render avatar in the chat header
+  const avatarContainer = document.getElementById('chat-header-avatar-container');
+  if (avatarContainer) {
+    const avatarHTML = (partnerProfile.images && partnerProfile.images.length > 0)
+      ? `<img src="${partnerProfile.images[0]}" class="connection-avatar" style="width: 40px; height: 40px;" alt="${escapeHTML(partnerProfile.full_name)}" />`
+      : `<div class="connection-avatar" style="width: 40px; height: 40px; font-size: 1rem;">👤</div>`;
+    avatarContainer.innerHTML = avatarHTML;
+  }
+
   showSection('chat-section');
   await loadChatMessages();
 }
