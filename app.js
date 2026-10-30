@@ -1517,7 +1517,7 @@ async function openChat(connectionId, partnerProfile) {
 }
 
 async function loadChatMessages() {
-  const container = document.getElementById('chat-messages-container');
+  const container = document.getElementById('chat-bubbles-list');
   if (!container) return;
   container.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">Loading messages...</p>';
   const { data: messages, error } = await supabaseClient
