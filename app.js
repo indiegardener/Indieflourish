@@ -323,6 +323,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+// SECTION 4.c: Questionnaire, Feed, Chat, Photo Setup Listener and Modal Action Listeners
   const discoverTab = document.getElementById('tab-discover-btn');
   const connectionsTab = document.getElementById('tab-connections-btn');
   const viewDiscover = document.getElementById('view-discover');
@@ -335,20 +336,8 @@ window.addEventListener('DOMContentLoaded', async () => {
       viewDiscover.style.display = 'flex';
       viewConnections.style.display = 'none';
       sessionStorage.setItem('indieflourish_dashboard_tab', 'discover');
-      const actionbar = document.getElementById('sticky-action-bar');
-      if (actionbar && currentCardIndex < availableProfiles.length) {
-        actionbar.style.display = 'flex';
-      }
-    });
-
-if (discoverTab && connectionsTab) {
-    discoverTab.addEventListener('click', () => {
-      discoverTab.classList.add('active');
-      connectionsTab.classList.remove('active');
-      viewDiscover.style.display = 'flex';
-      viewConnections.style.display = 'none';
-      sessionStorage.setItem('indieflourish_dashboard_tab', 'discover');
       sessionStorage.setItem('indieflourish_active_section', 'dashboard-section');
+      sessionStorage.removeItem('indieflourish_active_chat_id');
       const actionbar = document.getElementById('sticky-action-bar');
       if (actionbar && currentCardIndex < availableProfiles.length) {
         actionbar.style.display = 'flex';
@@ -361,6 +350,7 @@ if (discoverTab && connectionsTab) {
       viewConnections.style.display = 'flex';
       sessionStorage.setItem('indieflourish_dashboard_tab', 'connections');
       sessionStorage.setItem('indieflourish_active_section', 'dashboard-section');
+      sessionStorage.removeItem('indieflourish_active_chat_id');
       const actionbar = document.getElementById('sticky-action-bar');
       if (actionbar) actionbar.style.display = 'none';
       
