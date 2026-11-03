@@ -136,6 +136,13 @@ function showSection(sectionId) {
   if (activeEl) {
     activeEl.classList.add('active');
   }
+
+  // Persist active section across browser refreshes
+  sessionStorage.setItem('indieflourish_active_section', sectionId);
+  if (sectionId !== 'chat-section') {
+    sessionStorage.removeItem('indieflourish_active_chat_id');
+  }
+
   // AUTO-TRIGGER: If navigating to profile setup, automatically fetch GPS location on load
   if (sectionId === 'profile-section') {
     const locInput = document.getElementById('location');
@@ -155,7 +162,6 @@ function showSection(sectionId) {
     actionBar.style.display = (sectionId === 'dashboard-section' && document.getElementById('view-discover').style.display !== 'none' && currentCardIndex < availableProfiles.length) ? 'flex' : 'none';
   }
 }
-
 /* =========================================================================
    SECTION 4: APPLICATION INITIALIZATION & EVENT LISTENERS
    ========================================================================= */
