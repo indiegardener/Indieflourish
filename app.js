@@ -16,6 +16,7 @@ let currentCardIndex = 0;
 let currentReviewConnection = null;
 let activeChatConnectionId = null;
 let activeChatPartner = null;
+let currentChatSubscription = null; // Stores active Supabase Realtime WebSocket channel
 let uploadedImageUrlsTemp = [];
 let editPhotosTemp = [];
 let tempLatitude = null;
@@ -136,13 +137,16 @@ function showSection(sectionId) {
   if (activeEl) {
     activeEl.classList.add('active');
   }
-
   // Persist active section across browser refreshes
   sessionStorage.setItem('indieflourish_active_section', sectionId);
   if (sectionId !== 'chat-section') {
     sessionStorage.removeItem('indieflourish_active_chat_id');
+    // Clean up active Realtime WebSocket subscription when leaving chat view
+    if (currentChatSubscription) {
+      supabaseClient.removeChannel(currentChatSubscription);
+      currentChatSubscription = null;
+    }
   }
-
   // AUTO-TRIGGER: If navigating to profile setup, automatically fetch GPS location on load
   if (sectionId === 'profile-section') {
     const locInput = document.getElementById('location');
@@ -1462,7 +1466,6 @@ async function handleLeftSwipe(targetProfile) {
 /* =========================================================================
    SECTION 8: CONNECTIONS, CHAT & MESSAGING SYSTEM
    ========================================================================= */
-
 async function loadConnectionsList() {
   const acceptedContainer = document.getElementById('accepted-matches-container');
   const pendingContainer = document.getElementById('pending-matches-container');
@@ -1492,7 +1495,6 @@ async function loadConnectionsList() {
     if (!isIncoming && createdAt < thirtyDaysAgo) return false;
     return true;
   });
-
   if (accepted.length === 0) {
     acceptedContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.88rem;">No active matches yet. Keep exploring!</p>';
   } else {
@@ -1533,7 +1535,6 @@ async function loadConnectionsList() {
       acceptedContainer.appendChild(item);
     });
   }
-
   if (pending.length === 0) {
     pendingContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 0.88rem;">No pending connection requests.</p>';
   } else {
@@ -1582,9 +1583,56 @@ async function openChat(connectionId, partnerProfile) {
   }
   showSection('chat-section');
   await loadChatMessages();
+  subscribeToRealtimeChat(connectionId);
 }
 
-// SECTION 8.b: Load Chat Messages
+// SECTION 8.b: Load & Subscribe to Realtime Chat Messages
+function subscribeToRealtimeChat(connectionId) {
+  if (currentChatSubscription) {
+    supabaseClient.removeChannel(currentChatSubscription);
+    currentChatSubscription = null;
+  }
+  
+  currentChatSubscription = supabaseClient
+    .channel(`chat_room_${connectionId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `connection_id=eq.${connectionId}`
+      },
+      (payload) => {
+        const msg = payload.new;
+        appendSingleChatMessage(msg);
+      }
+    )
+    .subscribe();
+}
+
+function appendSingleChatMessage(msg) {
+  const container = document.getElementById('chat-messages-container');
+  if (!container) return;
+  
+  // Remove placeholder text if present
+  const placeholder = container.querySelector('p');
+  if (placeholder && placeholder.textContent.includes('No messages yet')) {
+    container.innerHTML = '';
+  }
+  
+  // Prevent duplicate rendering if the sender is current user (already appended optimistically)
+  if (msg.sender_id === currentUser.id) {
+    return;
+  }
+  
+  const bubble = document.createElement('div');
+  bubble.className = 'message-bubble received';
+  bubble.textContent = msg.message_text;
+  container.appendChild(bubble);
+  container.scrollTop = container.scrollHeight;
+}
+
 async function loadChatMessages() {
   const container = document.getElementById('chat-messages-container');
   if (!container) return;
@@ -1620,6 +1668,21 @@ async function sendChatMessage() {
   const text = input.value.trim();
   if (!text || !activeChatConnectionId) return;
   input.value = '';
+  
+  // Optimistically render sent message immediately
+  const container = document.getElementById('chat-messages-container');
+  if (container) {
+    const placeholder = container.querySelector('p');
+    if (placeholder && placeholder.textContent.includes('No messages yet')) {
+      container.innerHTML = '';
+    }
+    const bubble = document.createElement('div');
+    bubble.className = 'message-bubble sent';
+    bubble.textContent = text;
+    container.appendChild(bubble);
+    container.scrollTop = container.scrollHeight;
+  }
+
   const { error } = await supabaseClient
     .from('messages')
     .insert([
@@ -1632,7 +1695,6 @@ async function sendChatMessage() {
       .from('connections')
       .update({ updated_at: new Date().toISOString() })
       .eq('id', activeChatConnectionId);
-    await loadChatMessages();
   }
 }
 
