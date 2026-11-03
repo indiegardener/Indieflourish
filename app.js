@@ -227,10 +227,14 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (backToQuizBtn) {
     backToQuizBtn.addEventListener('click', async () => { await loadQuestionnaire(false); });
   }
-  const backToConnectionsBtn = document.getElementById('back-to-connections-btn');
+
+   const backToConnectionsBtn = document.getElementById('back-to-connections-btn');
   if (backToConnectionsBtn) {
     backToConnectionsBtn.addEventListener('click', async () => {
       showSection('dashboard-section');
+      sessionStorage.setItem('indieflourish_dashboard_tab', 'connections');
+      sessionStorage.setItem('indieflourish_active_section', 'dashboard-section');
+      sessionStorage.removeItem('indieflourish_active_chat_id');
       const discoverTab = document.getElementById('tab-discover-btn');
       const connectionsTab = document.getElementById('tab-connections-btn');
       const viewDiscover = document.getElementById('view-discover');
@@ -337,12 +341,26 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
     });
 
+if (discoverTab && connectionsTab) {
+    discoverTab.addEventListener('click', () => {
+      discoverTab.classList.add('active');
+      connectionsTab.classList.remove('active');
+      viewDiscover.style.display = 'flex';
+      viewConnections.style.display = 'none';
+      sessionStorage.setItem('indieflourish_dashboard_tab', 'discover');
+      sessionStorage.setItem('indieflourish_active_section', 'dashboard-section');
+      const actionbar = document.getElementById('sticky-action-bar');
+      if (actionbar && currentCardIndex < availableProfiles.length) {
+        actionbar.style.display = 'flex';
+      }
+    });
     connectionsTab.addEventListener('click', async () => {
       connectionsTab.classList.add('active');
       discoverTab.classList.remove('active');
       viewDiscover.style.display = 'none';
       viewConnections.style.display = 'flex';
       sessionStorage.setItem('indieflourish_dashboard_tab', 'connections');
+      sessionStorage.setItem('indieflourish_active_section', 'dashboard-section');
       const actionbar = document.getElementById('sticky-action-bar');
       if (actionbar) actionbar.style.display = 'none';
       
@@ -746,6 +764,50 @@ function updatePhotoCountIndicator() {
   }
 }
 
+async function restoreSavedSessionOrDashboard() {
+  const savedSection = sessionStorage.getItem('indieflourish_active_section');
+  
+  if (savedSection === 'chat-section') {
+    const savedChatId = sessionStorage.getItem('indieflourish_active_chat_id');
+    if (savedChatId) {
+      const { data: conn } = await supabaseClient
+        .from('connections')
+        .select('*, requester:profiles!connections_requester_id_fkey(*), receiver:profiles!connections_receiver_id_fkey(*)')
+        .eq('id', savedChatId)
+        .single();
+      if (conn) {
+        const partner = conn.requester_id === currentUser.id ? conn.receiver : conn.requester;
+        if (partner) {
+          await openChat(conn.id, partner);
+          return;
+        }
+      }
+    }
+  } else if (savedSection === 'dashboard-section') {
+    const savedTab = sessionStorage.getItem('indieflourish_dashboard_tab');
+    if (savedTab === 'connections') {
+      showSection('dashboard-section');
+      const discoverTab = document.getElementById('tab-discover-btn');
+      const connectionsTab = document.getElementById('tab-connections-btn');
+      const viewDiscover = document.getElementById('view-discover');
+      const viewConnections = document.getElementById('view-connections');
+      if (discoverTab && connectionsTab) {
+        discoverTab.classList.remove('active');
+        connectionsTab.classList.add('active');
+        if (viewDiscover) viewDiscover.style.display = 'none';
+        if (viewConnections) viewConnections.style.display = 'flex';
+      }
+      await loadConnectionsList();
+      return;
+    }
+  } else if (savedSection && ['profile-section', 'quiz-section', 'photos-prompt-section'].includes(savedSection)) {
+    showSection(savedSection);
+    return;
+  }
+  
+  await loadDashboard();
+}
+
 async function checkProfileStatus() {
   if (!currentUser) return;
   const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
@@ -755,7 +817,7 @@ async function checkProfileStatus() {
       if (!profile.images || profile.images.length === 0) {
         showSection('photos-prompt-section');
       } else {
-        await loadDashboard();
+        await restoreSavedSessionOrDashboard();
       }
     } else {
       await loadQuestionnaire(false);
@@ -1516,6 +1578,8 @@ async function loadConnectionsList() {
 async function openChat(connectionId, partnerProfile) {
   activeChatConnectionId = connectionId;
   activeChatPartner = partnerProfile;
+  sessionStorage.setItem('indieflourish_active_chat_id', connectionId);
+  sessionStorage.setItem('indieflourish_active_section', 'chat-section');
   
   const nameEl = document.getElementById('chat-partner-name');
   if (nameEl) nameEl.textContent = partnerProfile.full_name;
@@ -1524,11 +1588,10 @@ async function openChat(connectionId, partnerProfile) {
   const avatarContainer = document.getElementById('chat-header-avatar-container');
   if (avatarContainer) {
     const avatarHTML = (partnerProfile.images && partnerProfile.images.length > 0)
-      ? `<img src="${partnerProfile.images[0]}" class="connection-avatar" style="width: 40px; height: 40px;" alt="${escapeHTML(partnerProfile.full_name)}" />`
+      ? `<img src="${partnerProfile.images[0]}" class="connection-avatar" style="width:40px;height:40px;" alt="${escapeHTML(partnerProfile.full_name)}" />`
       : `<div class="connection-avatar" style="width: 40px; height: 40px; font-size: 1rem;">👤</div>`;
     avatarContainer.innerHTML = avatarHTML;
   }
-
   showSection('chat-section');
   await loadChatMessages();
 }
