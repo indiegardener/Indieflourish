@@ -167,13 +167,13 @@ function showSection(sectionId) {
    ========================================================================= */
 window.addEventListener('DOMContentLoaded', async () => {
   // SECTION 4.a: Session Check & Magic Link Auth Handlers
-  showSection('auth-section'); // Explicitly initialize clean default view on startup
-
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (session && session.user) {
     currentUser = session.user;
     window.history.replaceState({}, document.title, window.location.pathname);
     await checkProfileStatus();
+  } else {
+    showSection('auth-section'); // Only show auth screen if not logged in
   }
   
   const sendBtn = document.getElementById('send-magic-link-btn');
