@@ -249,7 +249,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // SECTION 4.c: Questionnaire, Feed, Chat, Photo Setup Listener and Modal Action Listeners
+// SECTION 4.c: Questionnaire, Feed, Chat, Photo Setup Listener and Modal Action Listeners
   const photoInput = document.getElementById('photo-upload-input');
   if (photoInput) {
     photoInput.addEventListener('change', async (e) => {
@@ -323,7 +323,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-// SECTION 4.c: Questionnaire, Feed, Chat, Photo Setup Listener and Modal Action Listeners
   const discoverTab = document.getElementById('tab-discover-btn');
   const connectionsTab = document.getElementById('tab-connections-btn');
   const viewDiscover = document.getElementById('view-discover');
@@ -333,24 +332,23 @@ window.addEventListener('DOMContentLoaded', async () => {
     discoverTab.addEventListener('click', () => {
       discoverTab.classList.add('active');
       connectionsTab.classList.remove('active');
-      viewDiscover.style.display = 'flex';
-      viewConnections.style.display = 'none';
+      if (viewDiscover) viewDiscover.style.display = 'flex';
+      if (viewConnections) viewConnections.style.display = 'none';
       sessionStorage.setItem('indieflourish_dashboard_tab', 'discover');
       sessionStorage.setItem('indieflourish_active_section', 'dashboard-section');
-      sessionStorage.removeItem('indieflourish_active_chat_id');
       const actionbar = document.getElementById('sticky-action-bar');
       if (actionbar && currentCardIndex < availableProfiles.length) {
         actionbar.style.display = 'flex';
       }
     });
+
     connectionsTab.addEventListener('click', async () => {
       connectionsTab.classList.add('active');
       discoverTab.classList.remove('active');
-      viewDiscover.style.display = 'none';
-      viewConnections.style.display = 'flex';
+      if (viewDiscover) viewDiscover.style.display = 'none';
+      if (viewConnections) viewConnections.style.display = 'flex';
       sessionStorage.setItem('indieflourish_dashboard_tab', 'connections');
       sessionStorage.setItem('indieflourish_active_section', 'dashboard-section');
-      sessionStorage.removeItem('indieflourish_active_chat_id');
       const actionbar = document.getElementById('sticky-action-bar');
       if (actionbar) actionbar.style.display = 'none';
       
